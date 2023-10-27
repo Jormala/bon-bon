@@ -115,6 +115,8 @@ let personBoundingBox = null;
 
 
 async function main() {
+    console.log(`IP: Trying to connect to Port '${RASPBERRY_PORT}'`);
+
     raspberryIp = await getRasperryPiAddress(RASPBERRY_PORT);
 
     servoEndpoint = `http://${raspberryIp}:${RASPBERRY_PORT}/servo`;

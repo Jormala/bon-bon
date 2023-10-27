@@ -3,6 +3,10 @@
 const cocoSsd = require('@tensorflow-models/coco-ssd');
 const tf = require('@tensorflow/tfjs-node');
 
+// TensorFlow gives out stupid information. We try to seperate 
+//  it from the rest of the input here
+console.log("\n");
+
 
 let model;
 
