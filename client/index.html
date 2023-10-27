@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bon-Bon Control Panel</title>
+
+    <style>
+        * {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-sizing: border-box;
+        }
+
+        .info-table {
+            border-collapse: collapse;
+            border: solid black 1px;
+            border-radius: 5px;
+
+            width: 500px;
+        }
+
+        td {
+            padding: 1rem;
+            border: solid black 1px;
+            border-radius: 5px;
+        }
+
+        tr > td:first-child {
+            width: 40%;
+            background-color: antiquewhite;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        tr > td:not(:first-child) {
+            background-color: whitesmoke;
+        }
+
+        code {
+            font-size: 1.5rem;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
+    <script src="front-end.js" defer></script>
+</head>
+<body>
+    <h1>Bon-Bon Control Panel</h1>
+    <h2>Info</h2>
+
+    <h3>Technical</h3>
+
+    <table class="info-table">
+        <tr>
+            <td>Client-Server connection</td>
+            <td>
+                <code id="client-connection">Uninitialized</code>
+            </td>
+            
+        </tr>
+        <tr>
+            <td>Camera response time</td>
+            <td>
+                <code id="camera-response-time">Uninitialized</code>
+            </td>
+        </tr>
+        
+        <!-- <tr>
+            <td>HEADER</td>
+            <td>
+                <code id="server-connection">Uninitialized</code>
+            </td>
+        </tr> -->
+    </table>
+
+    <br>
+    <h3>Fun</h3>
+    
+    <table class="info-table">
+        <tr>
+            <td>Vision</td>
+            <td>
+                <img id="vision">
+            </td>
+        </tr>
+        <tr>
+            <td>"Target"</td>
+            <td>
+                <img id="target">
+            </td>
+        </tr>
+        <tr>
+            <td>Current Animation</td>
+            <td>
+                <code id="current-animation">Uninitialized</code>
+            </td>
+        </tr>
+    </table>
+
+    <br>
+    <h2>Controls</h2>
+
+    <button onclick="sendHello()">Send hello</button>
+</body>
+</html>
