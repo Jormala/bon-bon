@@ -1,0 +1,22 @@
+[
+    {
+        "name": "wave",
+        "frames": [
+            {
+                "servos": [ 50, 50, 50 ],
+                "speed": 1000,
+                "still": 500
+            },
+            {
+                "servos": [ 0, 50, 33 ],
+                "speed": 500,
+                "still": 1000
+            },
+            {
+                "servos": [ 75, 100, 0 ],
+                "speed": 1000,
+                "still": 2000
+            }
+        ]
+    }
+]

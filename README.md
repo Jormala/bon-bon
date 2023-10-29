@@ -72,6 +72,7 @@ Once you have it, set the `RASPBERRY_PI` value in `server/options.json` to IP yo
 
 ## Architecture
 
+*lmao this diagram is already outdated*
 **Here's a nice diagram:** 
 
 ![](https://github.com/Jormala/bon-bon/assets/82582260/d5e6e397-b91e-43ef-b990-560abf31cdeb)
