@@ -17,7 +17,7 @@ export class Recognition {
         this.minScore = OPTIONS.get('MIN_SCORE');
     }
 
-    public async runImageRecognition(base64Image): Promise<any[]> {
+    public async runImageRecognition(base64Image: string): Promise<any[]> {
         if (!this.model) {
             // Load the model if it hasn't been loaded before. This saves a LOT of time
             await this.loadModel();

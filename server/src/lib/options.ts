@@ -1,11 +1,12 @@
 import fs from 'fs';
 
+console.log(__dirname, __filename)
 class Options {
-    public readonly OPTIONS_PATH = "/res/options.json";
+    public readonly OPTIONS_PATH = "res/options.json";
     private options: any;
 
     public constructor() {
-        const rawOptions = fs.readFileSync(this.OPTIONS_PATH);
+        const rawOptions = fs.readFileSync(this.OPTIONS_PATH, 'utf8');
 
         this.options = JSON.parse(rawOptions);
     }
@@ -19,7 +20,7 @@ class Options {
     }
 
     public save() {
-        fs.writeFileSync(this.OPTIONS_PATH, JSON.stringify(options, null, 4), () => { });
+        fs.writeFileSync(this.OPTIONS_PATH, JSON.stringify(this.options, null, 4));
     }
 }
 

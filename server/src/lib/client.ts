@@ -10,24 +10,31 @@ export class Client {
     // this is really stupid. WAAYY too accessible
     public messageHandler: (((data: any) => void) | undefined);
 
-    private CLIENT_PORT: number = 3001;  // This is defined in code in the client as well, so waaaa
+    private PORT: number = 31415;  // This is defined in code in the client as well, so waaaa
 
-    private client: WebSocket;
+    private server: WebSocket.Server;
+    private client?: WebSocket;
 
 
     public constructor() {
-        this.client = new WebSocket(`ws://localhost:${this.CLIENT_PORT}`);
+        console.log("CLIENT: Trying to establish connection to client...")
 
-        console.log('CLIENT: Trying to establish connection to client...')
+        this.server = new WebSocket.Server({ port: this.PORT });
 
-        this.client.on('message', this.handleClientMessage);
+        this.server.on('connection', (client: WebSocket) => {
+            if (this.validClient()) {
+                return;
+            }
 
-        this.client.on('open', () => {
-            console.log('CLIENT: Established connection!')
-        });
+            console.log("CLIENT: Established connection!")
 
-        this.client.on('close', () => {
-            console.log('CLIENT: Lost connection')
+            client.on('message', this.handleClientMessage);
+            client.on('close', () => {
+                console.log("CLIENT: Lost connection");
+                this.client = undefined;
+            });
+
+            this.client = client;
         });
     }
 
@@ -40,7 +47,7 @@ export class Client {
      * 
      * @param data
      */
-    public sendInfo(type: string, data: string) {
+    public sendInfo(type: string, data: any) {
         const json = {
             type: type,
             data: data
@@ -51,16 +58,17 @@ export class Client {
         this.sendToClient(stringifiedJson);
     }
 
-    private clientOpen(): boolean {
-        return this.client.readyState === WebSocket.OPEN;
+    private validClient(): boolean {
+        // lol !!
+        return !!(this.client && this.client!.readyState == WebSocket.OPEN);
     }
 
     private sendToClient(data: string) {
-        if (!this.clientOpen()) {
-            return
+        if (!this.validClient()) {
+            return;
         }
 
-        this.client.send(data);
+        this.client!.send(data);
     }
 
     private handleClientMessage(data: WebSocket.RawData) {

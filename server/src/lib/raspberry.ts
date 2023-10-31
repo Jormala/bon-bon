@@ -1,46 +1,66 @@
 const axios = require('axios');
 const ip = require('ip');
-
-import { CLIENT } from './client'
-import { OPTIONS } from './options'
 import WebSocket from 'ws';
+
+import { Client } from './client';
+import { OPTIONS } from './options'
 
 
 export class Raspberry {
-    private servoClient: WebSocket | undefined;
+    private servoClient?: WebSocket;
 
-    private raspberryIp: string | undefined;
-    private cameraEndpoint: string | undefined;
+    private raspberryIp?: string;
+    private cameraEndpoint?: string;
 
     private readonly RASPBERRY_PORT: number;
     private readonly CAMERA_TIMEOUT: number;
 
-    public constructor() {
+    private client: Client;
+
+    public constructor(client: Client) {
+        this.client = client;
+
         this.RASPBERRY_PORT = OPTIONS.get("RASPBERRY_PORT");
         this.CAMERA_TIMEOUT = OPTIONS.get("CAMERA_TIMEOUT");
     }
 
-    public async establishConnectino(): Promise<boolean> {
+    public async connect(): Promise<boolean> {
         if (!await this.getIPV4(this.RASPBERRY_PORT)) {
             return false;
         }
 
         this.cameraEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/camera`;
-        
-        const servoEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo`;
-        this.servoClient = new WebSocket(servoEndpoint);
 
         console.log('RASPBERRY: Trying to establish connection to Raspberry...');
+        this.servoClient = this.constructClient();
 
-        this.servoClient.on('open', () => {
+        return true;
+    }
+
+    private constructClient(): WebSocket {
+        // this doesn't need to be constructed EVERYtime here. too lazy to move
+        const servoEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo`;
+
+        const servoClient: WebSocket = new WebSocket(servoEndpoint);
+
+        servoClient.on('open', () => {
             console.log("RASPBERRY: Established connection!");
         });
 
-        this.servoClient.on('close', () => {
-            console.log("RASPBERRY: Lost connection")
+        servoClient.on('close', () => {
+            console.log("RASPBERRY: Lost connection");
+
+            setTimeout(r => {
+                console.log("RASPBERRY: Reconnecting...")
+                this.servoClient = this.constructClient();
+            }, 3000);
         });
 
-        return true;
+        servoClient.on('error', () => {
+            console.log("RASPBERRY: Failed to connect");
+        });
+
+        return servoClient;
     }
 
     public servoEndpointOpen(): boolean {
@@ -80,14 +100,14 @@ export class Raspberry {
             response = await axios.get(this.cameraEndpoint, { timeout: this.CAMERA_TIMEOUT });
         }
         catch (err) {
-            CLIENT.sendInfo('camera-response-time', "TIMED OUT");
+            this.client.sendInfo('camera-response-time', "TIMED OUT");
             throw err;
         }
 
         const responseTime = Date.now() - startTime;
         console.log(`RASPBERRY: Query took ${Math.round(responseTime / 100) / 10}s`)
 
-        CLIENT.sendInfo('camera-response-time', `${responseTime}ms`);
+        this.client.sendInfo('camera-response-time', `${responseTime}ms`);
 
         if (response.status != 200) {
             // This shouldn't EVER happen. 

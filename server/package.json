@@ -2,7 +2,7 @@
   "name": "iot-project",
   "version": "1.0.0",
   "description": "Project files for the IoT project.",
-  "main": "server.js",
+  "main": "build/server.js",
   "scripts": {
     "build": "npx tsc && node build/server.js"
   },
