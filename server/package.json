@@ -4,7 +4,7 @@
   "description": "Project files for the IoT project.",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npx tsc && node build/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +16,9 @@
     "express": "^4.18.2",
     "ip": "^1.1.8",
     "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.8",
+    "typescript": "^5.2.2"
   }
 }

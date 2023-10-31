@@ -1,0 +1,5 @@
+{
+    "RASPBERRY_IP": "192.168.1.132",
+    "RASPBERRY_PORT": 1880,
+    "RECEIVED_IMAGE_TYPE": "jpg"
+}
