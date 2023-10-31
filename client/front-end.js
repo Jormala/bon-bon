@@ -13,7 +13,7 @@ function connectWebSocket() {
     setElementText('client-connection', "Connecting...");
     console.log('Connecting...')
 
-    socket = new WebSocket('ws://localhost:3000');
+    socket = new WebSocket('ws://localhost:31415');
 
     socket.onopen = () => {
         console.log('WebSocket connection established');
