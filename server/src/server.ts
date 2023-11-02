@@ -1,9 +1,8 @@
-import { Client } from "./lib/client";
+import { WebClient } from "./lib/webclient";
 import { Raspberry } from "./lib/raspberry";
 import { Controller } from './lib/controller';
 
-
-const client = new Client();
+const client = new WebClient();
 const raspberry = new Raspberry(client);
 const controller = new Controller(client, raspberry);
 
@@ -17,6 +16,7 @@ async function getRunner(func: any) {
             // typescript moment
             if (err instanceof Error) {
                 console.error(err);
+                throw err
             }
         }
     }
@@ -24,6 +24,7 @@ async function getRunner(func: any) {
 
 raspberry.connect().then((result) => {
     if (!result) {
+        // Didnt't locate the raspberry on the network, exit the program.
         process.exit();
     }
 

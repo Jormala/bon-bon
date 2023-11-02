@@ -1,107 +1,144 @@
-import { OPTIONS } from './options';
-
-import { Animation } from './animation';  
-import { Client } from './client';  
-import { Parser } from './parser';  
-import { Recognition } from './recognition';
-import { Raspberry } from './raspberry';
 import { AxiosError } from 'axios';
 
-/* 
-Here we have the "Controller" class. Here's what it does:
-- Handles the general behaviour of Bon-Bon, such as scheduling animations and RECEIVING animations
-- Keep's track of what animation the parser is munching on
-- 
-*/
+import { Position } from './animation';  
+import { WebClient } from './webclient'
+import { Recognition } from './recognition';
+import { Raspberry } from './raspberry';
+import { Animator, BoundingBox } from './animator';
+
+import { OPTIONS } from './options';
+
+
 export class Controller {
     private recognition: Recognition;
-    private parser: Parser;
     private raspberry: Raspberry;
-    private client: Client;
+    private client: WebClient;
+    private animator: Animator;
 
-    private receivedImageType: string;
-    private currentAnimation?: Animation;
+    private RECEIVED_IMAGE_TYPE: string;
 
-    public wantToSee: boolean = true;  // Whether to parse camera input
-    private currentBoundingBox: number[] = [];
-    private lastSeen?: number[];  // Maybe the default value could be at the center
+    private currentBoundingBox?: BoundingBox | null;
+    private lastSeen?: BoundingBox;
 
-    public constructor(client: Client, raspberry: Raspberry) {
+    private wantToSee = true;
+
+
+    public constructor(client: WebClient, raspberry: Raspberry) {
         this.raspberry = raspberry;
         this.client = client;
 
         this.recognition = new Recognition();
-        this.parser = new Parser(this.raspberry);
+        this.animator = new Animator(this.raspberry);
 
-        this.receivedImageType = OPTIONS.get("this.receivedImageType")
+        this.RECEIVED_IMAGE_TYPE = OPTIONS.get("RECEIVED_IMAGE_TYPE");
 
-        this.client.messageHandler = this.handleInput;
+        this.client.setMessageHandler((type, data) => { this.handleInput(type, data) });
+
+        this.animator.loadAnimation('wave');
+        // this.animator.loopAnimation = true;
     }
 
+    /**
+     * Servo lifecycle
+     */
     public async servoRunner() {
-        // Servo lifecycle
+        // await new Promise(r => r);
+        await new Promise(r => setTimeout(r, 10));
 
-        await new Promise(r => setTimeout(r, 1000));
+        // this.client.sendInfo('parser-status', this.animator.status);
+
+        this.animator.animate();
     }
 
+    /**
+     * Camera lifecycle
+     */
     public async cameraRunner() {
-        // Camera lifecycle
-
         if (!this.wantToSee) {
+            // We don't to get camera input, wait a bit
             await new Promise(r => setTimeout(r, 100));
             return;
         }
 
-        let rawImageData: string; 
+        let rawImageData; 
         try {
             rawImageData = await this.raspberry.getCamera();
         }
         catch (err) {
             if (err instanceof AxiosError) {
+                console.log("RASPBERRY: Camera timed out!");
                 return;
             }
 
             throw err;
         }
 
-        this.currentBoundingBox = await this.getBoundingBox(rawImageData);
+        const bbox = await this.getBoundingBox(rawImageData);
+        this.currentBoundingBox = bbox.length == 4 ? bbox as BoundingBox : null;
 
-        if (this.currentBoundingBox.length != 4) {
-            this.lastSeen = this.currentBoundingBox;
+        if (this.currentBoundingBox) {
+            this.lastSeen = this.currentBoundingBox!;
         }
     }
     
-    public handleInput(input: any) {
+    public handleInput(type: string, data: string) {
         // handles the user given input
+        
+        console.log(type, data);
+        
+        // TODO: Send logging responses back from some of these.
+        try {
+            switch (type) {
+                case 'start-animation':
+                    this.animator.loadAnimation('wave');
+                    break;
+
+                case 'pose':
+                    const parsedJSON = JSON.parse(data);
+                    const position: Position = Position.fromJSON(parsedJSON);
+
+                    if (!position.allServosSpecified()) {
+                        this.client.sendInfo('log', "Not all servos were specified!");
+                        break;
+                    }
+
+                    this.animator.setPosition(position);
+
+                    break;
+                
+                case 'restart-animation':
+                    this.animator.animateToStart();
+                    break;
+
+                case 'loop-animation':
+                    this.animator.loopAnimation = data == 'true';
+                    break;
+            }
+        }
+        catch (err) {
+            if (err instanceof Error) {
+                this.client.sendInfo('log', "Error processing input: ${err.message}");
+            }
+            else {
+                console.error(err);
+                this.client.sendInfo('log', "Fatal exception occurred!");
+            }
+        }
     }
 
+    // This method REALLY doesn't belong here...
     private async getBoundingBox(imageData: string): Promise<number[]> {
         // const imageData: string = await this.raspberry.getCamera();
 
         const startTime = Date.now();  // Debugging information
-
-        const imgData = `data:image/${this.receivedImageType};data:image/${this.receivedImageType};base64,${imageData}`;
-        this.client.sendInfo('vision', imgData)
+        const imgData = `data:image/${this.RECEIVED_IMAGE_TYPE};data:image/${this.RECEIVED_IMAGE_TYPE};base64,${imageData}`;
+        this.client.sendInfo('vision', imgData);
 
         // Detect thingys in the image
-        const predictions = await this.recognition.runImageRecognition(imageData);
-
-        // Prints useful things
-        console.log(`RECOGNITION: Objects: [ ${predictions.map((prediction: any) => `"${prediction.class}"`).join(', ')} ]. Took ${(Date.now() - startTime) / 1000}s`);
-
-        // "any" 🤮🤮🤮
-        const firstPerson: any = predictions.filter((prediction: any) => prediction.class == "person")
-            .sort((prediction: any) => prediction.score)[0];
-        if (!firstPerson) {
-            this.client.sendInfo('person-bbox', []);
-            console.log("RECOGNITION: No people in view");
-            return [];
-        }
-
-        const bbox: number[] = firstPerson.bbox;
+        const bbox = await this.recognition.getFirstPersonBoundingBox(imageData);
         this.client.sendInfo('person-bbox', bbox);
 
-        console.log(`RECOGNITION: First person Bounding Box: [ ${bbox.map((coord => `"${Math.round(coord * 100) / 100}"`)).join(', ')}) ]`);
+        console.log(`RECOGNITION: Took ${(Date.now() - startTime)}ms`)
 
         return bbox;
     }

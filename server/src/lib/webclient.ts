@@ -1,14 +1,14 @@
 import WebSocket from 'ws';
 
 
+type MessageHandler = (type: string, data: string) => void;
+
 /**
  * - Establishes a connection to the client
  * - Sends and receives data from it
  */
-
-export class Client {
-    // this is really stupid. WAAYY too accessible
-    public messageHandler: (((data: any) => void) | undefined);
+export class WebClient {
+    private messageHandler?: MessageHandler;
 
     private PORT: number = 31415;  // This is defined in code in the client as well, so waaaa
 
@@ -28,7 +28,7 @@ export class Client {
 
             console.log("CLIENT: Established connection!")
 
-            client.on('message', this.handleClientMessage);
+            client.on('message', (rawData) => { this.handleClientMessage(rawData) });
             client.on('close', () => {
                 console.log("CLIENT: Lost connection");
                 this.client = undefined;
@@ -36,15 +36,21 @@ export class Client {
 
             this.client = client;
         });
+
+        this.server.on('error', () => { 
+            console.log(`CLIENT: Unable to host a server on port ${this.PORT}`);
+        });
+    }
+    
+    public setMessageHandler(newMessageHandler: MessageHandler) {
+        this.messageHandler = newMessageHandler;
     }
 
     /**
      * Sends info about the server to the client.
      * 
      * @param type - The type of data you're sending.
-     * 
      * - ***The type has to be configured on the client side.***
-     * 
      * @param data
      */
     public sendInfo(type: string, data: any) {
@@ -73,16 +79,14 @@ export class Client {
 
     private handleClientMessage(data: WebSocket.RawData) {
         const message = data.toString('utf8');
-
         const receivedJson: any = JSON.parse(message);
 
         console.log("CLIENT: Received JSON");
-
         if (!this.messageHandler) {
             console.log("WARNING: ClientHandler isn't set!")
             return
         }
 
-        this.messageHandler(receivedJson);
+        this.messageHandler(receivedJson.type, receivedJson.data);
     }
 }

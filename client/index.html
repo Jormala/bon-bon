@@ -19,21 +19,35 @@
             width: 500px;
         }
 
-        td {
+        /* WHAT THE FUCK IS A `tbody` ELEMENT IN MY MOTHERF#@KING TABLES 
+        I SPEND AN HOUR DEBUGGING THIS SHIT */
+        .info-table > tbody > tr > td {
             padding: 1rem;
             border: solid black 1px;
             border-radius: 5px;
         }
 
-        tr > td:first-child {
+        .info-table > tbody > tr > td:first-child {
             width: 40%;
             background-color: antiquewhite;
             font-size: 1.5rem;
             font-weight: bold;
         }
         
-        tr > td:not(:first-child) {
+        .info-table > tbody > tr > td:not(:first-child) {
             background-color: whitesmoke;
+        }
+
+        #logging-table {
+            
+        }
+
+        #logging-table tr td:first-of-type:after {
+            content: '.';
+        }
+
+        #logging-table code {
+            font-size: 1rem;
         }
 
         code {
@@ -54,6 +68,9 @@
     <h1>Bon-Bon Control Panel</h1>
     <h2>Info</h2>
 
+    <!-- TODO: Yeah it's kind of an pain in the ass to log everything, so probably merge the two main tables 
+    together and remove some of the fileds that you haven't implemented yet. -->
+
     <h3>Technical</h3>
 
     <table class="info-table">
@@ -62,7 +79,6 @@
             <td>
                 <code id="client-connection">Uninitialized</code>
             </td>
-            
         </tr>
         <tr>
             <td>Camera response time</td>
@@ -77,6 +93,51 @@
                 <code id="server-connection">Uninitialized</code>
             </td>
         </tr> -->
+    </table>
+
+    <h3>Log</h3>
+    <table id="logging-table">
+        <tr>
+            <td>1</td>
+            <td><code id="log-0"></code>
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td><code id="log-1"></code></td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td><code id="log-2"></code></td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td><code id="log-3"></code></td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td><code id="log-4"></code></td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td><code id="log-5"></code></td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td><code id="log-6"></code></td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td><code id="log-7"></code></td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td><code id="log-8"></code></td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td><code id="log-9"></code></td>
+        </tr>
     </table>
 
     <br>
@@ -106,6 +167,9 @@
     <br>
     <h2>Controls</h2>
 
-    <button onclick="sendHello()">Send hello</button>
+    <!-- Add the input to send custom positions to Bon-Bon -->
+    <!-- Add a way to input the animation that you want to start. (an inputbox?) -->
+    <button onclick="sendData('restart-animation', null)">Restart Animation</button>
+    <button onclick="sendData('start-animation', 'wave')">Wave</button>
 </body>
 </html>

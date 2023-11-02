@@ -2,12 +2,15 @@ const axios = require('axios');
 const ip = require('ip');
 import WebSocket from 'ws';
 
-import { Client } from './client';
+import { WebClient } from './webclient';
+import { Position } from './animation';
+
 import { OPTIONS } from './options'
 
 
 export class Raspberry {
     private servoClient?: WebSocket;
+    private _servos?: Position;
 
     private raspberryIp?: string;
     private cameraEndpoint?: string;
@@ -15,9 +18,10 @@ export class Raspberry {
     private readonly RASPBERRY_PORT: number;
     private readonly CAMERA_TIMEOUT: number;
 
-    private client: Client;
+    private client: WebClient;
 
-    public constructor(client: Client) {
+
+    public constructor(client: WebClient) {
         this.client = client;
 
         this.RASPBERRY_PORT = OPTIONS.get("RASPBERRY_PORT");
@@ -76,23 +80,27 @@ export class Raspberry {
      * 
      * @param servoData Data send to the servos. **Needs to be formatted correctly.**
      */
-    public sendServos(servoData: string) {
+    public setServos(position: Position) {
         if (!this.servoEndpointOpen()) {
             return;
         }
 
-        console.log("RASPBERRY: Send data to Servos")
+        this._servos = position;
+        this.servoClient!.send(position.toString());
+    }
 
-        this.servoClient!.send(servoData);
+    public get servos() {
+        return this._servos;
     }
 
     /**
-     * Fetches Bon-Bon's vision.
+     * Fetches Bon-Bon's vision. Throws an error if camera time's out
      * 
-     * @returns 
+     * @returns Image encoded in base64
      */
     public async getCamera(): Promise<string> {
         console.log("RASPBERRY: Quering CAMERA endpoint")
+
         const startTime = Date.now();
 
         let response;
@@ -101,11 +109,12 @@ export class Raspberry {
         }
         catch (err) {
             this.client.sendInfo('camera-response-time', "TIMED OUT");
+            this.client.sendInfo('log', "Camera timed out")
             throw err;
         }
 
         const responseTime = Date.now() - startTime;
-        console.log(`RASPBERRY: Query took ${Math.round(responseTime / 100) / 10}s`)
+        console.log(`RASPBERRY: Camera query took ${responseTime}ms`)
 
         this.client.sendInfo('camera-response-time', `${responseTime}ms`);
 

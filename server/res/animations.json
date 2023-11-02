@@ -1,0 +1,35 @@
+[
+    {
+        "name": "wave",
+        "headStill": true,
+        "frames": [
+            {
+                "speed": 0,
+                "still": 200,
+                "position": {
+                    "head1": 90,
+                    "torso2": 10,
+                    "eye3": 10
+                }
+            },
+            {
+                "speed": 500,
+                "still": 1000,
+                "position": {
+                    "head1": 50,
+                    "torso2": 50,
+                    "eye3": 90
+                }
+            },
+            {
+                "speed": 1000,
+                "still": 1000,
+                "position": {
+                    "head1": 10,
+                    "torso2": 70,
+                    "eye3": 10
+                }
+            }
+        ]
+    }
+]
