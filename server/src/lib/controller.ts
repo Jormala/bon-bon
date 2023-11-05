@@ -20,7 +20,7 @@ export class Controller {
     private currentBoundingBox?: BoundingBox | null;
     private lastSeen?: BoundingBox;
 
-    private wantToSee = true;
+    private wantToSee = false;
 
 
     public constructor(client: WebClient, raspberry: Raspberry) {
@@ -84,13 +84,11 @@ export class Controller {
     public handleInput(type: string, data: string) {
         // handles the user given input
         
-        console.log(type, data);
-        
         // TODO: Send logging responses back from some of these.
         try {
             switch (type) {
                 case 'start-animation':
-                    this.animator.loadAnimation('wave');
+                    this.animator.loadAnimation(data);
                     break;
 
                 case 'pose':
@@ -102,7 +100,7 @@ export class Controller {
                         break;
                     }
 
-                    this.animator.setPosition(position);
+                    this.animator.animateToPosition(position);
 
                     break;
                 
@@ -110,14 +108,16 @@ export class Controller {
                     this.animator.animateToStart();
                     break;
 
-                case 'loop-animation':
-                    this.animator.loopAnimation = data == 'true';
+                case 'toggle-loop':
+                    this.animator.loopAnimation = !this.animator.loopAnimation;
                     break;
             }
         }
         catch (err) {
             if (err instanceof Error) {
-                this.client.sendInfo('log', "Error processing input: ${err.message}");
+                console.log("CONTROLLER: An exception occured when handling CLIENT request...");
+                console.error(err);
+                this.client.sendInfo('log', `Error processing input: ${err.message}`);
             }
             else {
                 console.error(err);

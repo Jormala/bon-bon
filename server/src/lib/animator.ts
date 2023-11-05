@@ -22,13 +22,11 @@ interface AnimationObject {
 export class Animator {
     private raspberry: Raspberry;
 
-    public status: string = "Nothing going on";
-    public loopAnimation = false;
+    public status: string = "Nothing going on";  // this is kind of autistic
 
-    private currentAnimation?: AnimationObject;
-    private originalAnimation: AnimationObject | null = null;
-    private _animationEnded = true;
-
+    private _loopAnimation = false;
+    private currentAnimation: AnimationObject | null = null;
+    private transitionAnimation: AnimationObject | null = null;
 
     private readonly ANIMATIONS_PATH: string = "res/animations.json";
 
@@ -36,24 +34,67 @@ export class Animator {
         this.raspberry = raspberry;
     }
 
-    public get animationEnded(): boolean {
-        return this._animationEnded;
+    public transitioning(): boolean {
+        return Boolean(this.transitionAnimation) && !this.transitionAnimation!.animation.animationEnded();
+    }
+
+    public animationEnded(): boolean {
+        return !this.transitioning() && !(Boolean(this.currentAnimation) && !this.currentAnimation!.animation.animationEnded());
+    }
+
+    public get loopAnimation(): boolean {
+        return this._loopAnimation;
+    }
+
+    public set loopAnimation(value: boolean) {
+        if (value === this._loopAnimation) {
+            return;
+        }
+
+        this._loopAnimation = value;
+
+        if (this._loopAnimation) {
+            // We only need to act here if...
+            // - The current animation has ended (otherwise we will loop in animate)
+            // - The next animation hasn't been defined
+
+            if (this.animationEnded()) {
+                this.currentAnimation?.animation.resetAnimation();
+            }
+        }
     }
 
     public animate() {
-        if (this._animationEnded) {
-            if (!this.currentAnimation || !this.loopAnimation) {
+        if (this.animationEnded()) {
+            // No animation is playing currently
+            return;
+        }
+
+        if (this.transitioning()) {
+            this.handleAnimation(this.transitionAnimation!);
+            
+            if (!this.transitionAnimation!.animation.animationEnded()) {
+                // Animation didn't finish, return right away
                 return;
             }
 
+            // Discard the "transitionAnimation", as it's unreliable to keep
+            this.transitionAnimation = null;
+
+            // Reset the "real" animation (if one is set)
+            this.currentAnimation?.animation.resetAnimation();
+            return;
+        }
+
+        this.handleAnimation(this.currentAnimation!);
+
+        if (this.currentAnimation!.animation.animationEnded() && this.loopAnimation) {
             this.animateToStart();
         }
+    }
 
-        const position: Position = this.currentAnimation!.animation.animate();
-
-        if (this.currentAnimation!.animation.animationEnded()) {
-            this._animationEnded = true;
-        }
+    private handleAnimation(animationObject: AnimationObject) {
+        const position: Position = animationObject.animation.animate();
 
         if (this.currentAnimation!.keepHeadStill) {
             HEAD_SERVOS.forEach(headServo => {
@@ -62,48 +103,39 @@ export class Animator {
         }
 
         this.raspberry.setServos(position);
-
-        // this sucks this sucks dick
-        // i hate how we have to make this property
-        // i hate how it's only purpose is to serve looping
-        // i hate how it's part of the "animate" method
-        if (this.originalAnimation && this._animationEnded) {
-            this.currentAnimation = this.originalAnimation;
-            this.currentAnimation.animation.resetAnimation();
-            this._animationEnded = false;
-
-            this.originalAnimation = null;
-
-            this.status = "Playing animation...";
-        }
     }
 
     public animateToStart() {
-        if (!this.currentAnimation || this.originalAnimation) {
-            return;
-        }
+        this.status = "Restarting current animation..."
 
         // Gets the position at the start of the animation
-        const startPosition: Position = this.currentAnimation.animation.getPosition(0);
+        const startPosition: Position = this.currentAnimation!.animation.getPosition(0);
         const animationToStart: Animation = this.animationToPosition(startPosition);
 
-        this.status = "Restarting current animation..."
-        this.originalAnimation = this.currentAnimation!;
-        this.setAnimation(animationToStart);
+        this.transitionAnimation = {
+            animation: animationToStart,
+            keepHeadStill: false
+        };
     }
 
-    public setPosition(position: Position, keepHeadStill = false) {
-        const animation = this.animationToPosition(position);
-
-        this.setAnimation(animation);
-    }
-
-    public loadAnimation(animationName: string): boolean {
+    public loadAnimation(animationName: string) {
         // Reason we load every time, is so we can edit the animation data during runtime and then update
         const data: string = fs.readFileSync(this.ANIMATIONS_PATH, 'utf8');
-        const loadedAnimations: any = JSON.parse(data);
 
-        let foundAnimation;
+        let loadedAnimations;
+        try {
+            loadedAnimations = JSON.parse(data);
+        }
+        catch (err) {
+            if (err instanceof SyntaxError) {
+                // Give a slightly better message when parsing fails
+                throw new SyntaxError(`JSON parsing Error "${err.message}"`);
+            }
+
+            throw err
+        }
+
+        let foundAnimation = undefined;
         for (let animation of loadedAnimations) 
         {
             if (animation.name === animationName) {
@@ -111,41 +143,37 @@ export class Animator {
             }
         }
 
-        if (foundAnimation) {
-            // this line can throw an error if the animation data was stupid and dumb
-            const newAnimation = Animation.fromJSON(foundAnimation.frames);
-
-            this.setAnimation(newAnimation, !!(foundAnimation.keepHeadStill));
+        if (foundAnimation === undefined) {
+            throw Error(`Didn't find a animation with the name '${animationName}'`);
         }
 
-        return !!(foundAnimation);
+        // this line can throw an error if the animation data was stupid and dumb
+        const newAnimation: AnimationObject = {
+            animation: Animation.fromJSON(foundAnimation.frames),
+            keepHeadStill: Boolean(foundAnimation.keepHeadStill)
+        };
+
+        this.setAnimation(newAnimation);
     }
 
-    private setAnimation(animation: Animation, keepHeadStill = false) {
-        // HUGE TODO: Make so this method ALWAYS animates to the first frame of the given animation.
-        // After that, it starts the given animation
-        // Use animationToPosition?
-        // Just use animateToStart as the last call in this function
-        // THIS WILL CAUSE AN RECURSION SHIT
-
-        // random thought, make so this whole class has two states, going to the first frame of the given animation,
-        // and animating the given animation.
-
-        // using that philosophy might make the code a bit cleaner
-
-        this.currentAnimation = {
-            animation: animation,
-            keepHeadStill: keepHeadStill
-        }
-
-        this._animationEnded = animation.animationEnded();
+    private setAnimation(animationObject: AnimationObject) {
+        this.currentAnimation = animationObject;
+        this.animateToStart();
     }
 
     private animationToPosition(position: Position, duration = 1000): Animation {
+        // IF we don't know the current position, we "jump" to the given position...
+        // this is fucking dumb and dangerous
+        const currentPosition = this.raspberry.servos ?? position;
+        if (currentPosition === position) {
+            // If we jump straight away, why wait?
+            duration = 0;
+        }
+
         const animation = new Animation(
             [
                 new Frame(
-                    this.raspberry.servos!,  // position
+                    currentPosition,  // position
                     0,  // startTime
                     0,  // still
                     0   // speed
@@ -162,13 +190,19 @@ export class Animator {
         return animation;
     }
 
-    private lookAt(boundingBox: BoundingBox) {
+    public animateToPosition(position: Position, duration = 1000) {
+        this.currentAnimation = null;
+        this.transitionAnimation = {
+            animation: this.animationToPosition(position, duration),
+            keepHeadStill: true
+        };
+    }
+
+    public lookAt(boundingBox: BoundingBox) {
         const finalPosition = this.calculateHeadPosition(boundingBox);
 
-        const timeToTurn = OPTIONS.get("LOOK_SPEED");
-        const lookAtAnimation = this.animationToPosition(finalPosition, timeToTurn);
-
-        this.setAnimation(lookAtAnimation);
+        // Not a complex animation that we would want to loop, so we only "transition" here
+        this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
     }
 
     private calculateHeadPosition(targetBoundingBox: BoundingBox): Position {

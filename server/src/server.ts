@@ -9,14 +9,14 @@ const controller = new Controller(client, raspberry);
 
 async function getRunner(func: any) {
     while (true) {
-        try { 
+        try {
             await func();
         }
         catch (err) {
             // typescript moment
             if (err instanceof Error) {
                 console.error(err);
-                throw err
+                throw err;
             }
         }
     }

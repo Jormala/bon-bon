@@ -1,5 +1,3 @@
-import fs from 'fs';
-
 /**
  * This document specifies the components needed to make an non dynamic animation
  * Animations are made dynamic using "Animator"
@@ -14,7 +12,11 @@ export enum Servo {
     Eye3 = 'eye3'
 }
 
-export const HEAD_SERVOS: Servo[] = [Servo.Head1, Servo.Eye3];
+/**
+ * The servos that are required for head movement, and that we DON'T want
+ * to move when an animation is playing.
+ */
+export const HEAD_SERVOS: Servo[] = [ Servo.Head1, Servo.Eye3 ];
 
 
 function map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -92,7 +94,7 @@ export class Position {
         for (const servo of Object.values(Servo))
         {
             // pretty weird that there are TWO if statements here...
-            // could be done in a better way ABSOLUTELY
+            // could this be done in a better way? ABSOLUTELY
 
             if (!(specifiedServos.includes(servo))) {  // ALL servos
                 return false;
@@ -114,12 +116,16 @@ export class Position {
             const servo1 = pos1.servos[servo];
             const servo2 = pos2.servos[servo];
 
-            if (servo1 === null || servo2 === null) {
-                // too much of an headache to think about...
-                return null;
+            let interpolatedValue: number;
+            if (servo1 === null) {
+                interpolatedValue = servo2 as number;
             }
-
-            const interpolatedValue = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
+            else if (servo2 === null) {
+                interpolatedValue = servo1 as number;
+            }
+            else {
+                interpolatedValue = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
+            }
 
             returnServos[servo] = interpolatedValue;
         }
@@ -141,7 +147,6 @@ export class Position {
  * Represents a frame of movement. 
  */
 export class Frame {
-
     public still: number;
     public speed: number;
     public position: Position;

@@ -47,8 +47,11 @@ export class Raspberry {
 
         const servoClient: WebSocket = new WebSocket(servoEndpoint);
 
-        servoClient.on('open', () => {
+        servoClient.on('open', async() => {
             console.log("RASPBERRY: Established connection!");
+
+            // TODO: Implement this
+            // this._servos = await this.fetchServos();
         });
 
         servoClient.on('close', () => {
@@ -89,6 +92,9 @@ export class Raspberry {
         this.servoClient!.send(position.toString());
     }
 
+    // TODO: Make this an async method. 
+    // We usually want to be sure about the servo values and are willing to wait to get the ACTUAL
+    // servo values (thinking of Animator).
     public get servos() {
         return this._servos;
     }

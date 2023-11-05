@@ -24,7 +24,6 @@ export class Recognition {
         // The complicated magic
         const imageBuffer = Buffer.from(base64Image, 'base64');
         const imageTensor = tf.node.decodeImage(imageBuffer);
-
         const predictions = await this.model.detect(imageTensor, undefined, this.minScore);
 
         return predictions;
@@ -36,8 +35,8 @@ export class Recognition {
         console.log(`RECOGNITION: Objects: [ ${predictions.map((prediction: any) => `"${prediction.class}"`).join(', ')} ]`);
 
         // "any" 🤮🤮🤮
-        const firstPerson: any = predictions.filter((prediction: any) => prediction.class == "person")
-            .sort((prediction: any) => prediction.score)[0];
+        const firstPerson: any = predictions.filter(prediction => prediction.class == "person")
+                                            .sort(prediction => prediction.score)[0];
         if (!firstPerson) {
             console.log("RECOGNITION: No people in view");
             return [];
