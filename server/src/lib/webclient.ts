@@ -13,7 +13,7 @@ export class WebClient {
     private PORT: number = 31415;  // This is defined in code in the client as well, so waaaa
 
     private server: WebSocket.Server;
-    private client?: WebSocket;
+    private client: WebSocket | null = null;
 
 
     public constructor() {
@@ -28,10 +28,12 @@ export class WebClient {
 
             console.log("CLIENT: Established connection!")
 
-            client.on('message', (rawData) => { this.handleClientMessage(rawData) });
+            // You need to pass `handleClientMessage` like this. Otherwise you fuck up
+            client.on('message', rawData => this.handleClientMessage(rawData));
+
             client.on('close', () => {
                 console.log("CLIENT: Lost connection");
-                this.client = undefined;
+                this.client = null;
             });
 
             this.client = client;
@@ -40,10 +42,6 @@ export class WebClient {
         this.server.on('error', () => { 
             console.log(`CLIENT: Unable to host a server on port ${this.PORT}`);
         });
-    }
-    
-    public setMessageHandler(newMessageHandler: MessageHandler) {
-        this.messageHandler = newMessageHandler;
     }
 
     /**
@@ -64,9 +62,17 @@ export class WebClient {
         this.sendToClient(stringifiedJson);
     }
 
+    /**
+     * Sets the new message handler that is called whenever a new message is received
+     * @param newMessageHandler The new message handler
+     */
+    public setMessageHandler(newMessageHandler: MessageHandler) {
+        this.messageHandler = newMessageHandler;
+    }
+
+
     private validClient(): boolean {
-        // lol !!
-        return !!(this.client && this.client!.readyState == WebSocket.OPEN);
+        return Boolean(this.client) && this.client!.readyState == WebSocket.OPEN;
     }
 
     private sendToClient(data: string) {

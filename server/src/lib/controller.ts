@@ -82,11 +82,13 @@ export class Controller {
     }
     
     public handleInput(type: string, data: string) {
-        // handles the user given input
-        
         // TODO: Send logging responses back from some of these.
         try {
             switch (type) {
+                case 'reload-animation':
+                    OPTIONS.load();
+                    break;
+
                 case 'start-animation':
                     this.animator.loadAnimation(data);
                     break;
@@ -95,21 +97,21 @@ export class Controller {
                     const parsedJSON = JSON.parse(data);
                     const position: Position = Position.fromJSON(parsedJSON);
 
-                    if (!position.allServosSpecified()) {
-                        this.client.sendInfo('log', "Not all servos were specified!");
-                        break;
-                    }
-
                     this.animator.animateToPosition(position);
-
                     break;
                 
                 case 'restart-animation':
                     this.animator.animateToStart();
                     break;
 
-                case 'toggle-loop':
-                    this.animator.loopAnimation = !this.animator.loopAnimation;
+                case 'set-looping':
+                    this.animator.loopAnimation = data === 'true';
+
+                    this.client.sendInfo('log', `Set looping to "${this.animator.loopAnimation}"`);
+                    break;
+
+                default:
+                    this.client.sendInfo('log', `Invalid command type "${type}"`);
                     break;
             }
         }

@@ -3,6 +3,7 @@ import { Animation, Frame, Position, HEAD_SERVOS } from './animation';
 import { OPTIONS } from './options';
 
 import fs from 'fs';
+import { WebClient } from './webclient';
 
 
 export type BoundingBox = [number, number, number, number]
@@ -17,21 +18,23 @@ interface AnimationObject {
 }
 
 /**
- * Handles how animations are parsed. Takes into accont the current behaviour of the bot
+ * Handles how animations are parsed and moves servos accordingly
  */
 export class Animator {
     private raspberry: Raspberry;
-
-    public status: string = "Nothing going on";  // this is kind of autistic
+    private client: WebClient | null = null;
 
     private _loopAnimation = false;
+    // Represents the actual animation that we want to handle.
     private currentAnimation: AnimationObject | null = null;
+    // A "temporary" animation that's used to transition between frames
     private transitionAnimation: AnimationObject | null = null;
 
     private readonly ANIMATIONS_PATH: string = "res/animations.json";
 
-    public constructor(raspberry: Raspberry) {
+    public constructor(raspberry: Raspberry, client?: WebClient) {
         this.raspberry = raspberry;
+        this.client = client ?? null;
     }
 
     public transitioning(): boolean {
@@ -39,6 +42,7 @@ export class Animator {
     }
 
     public animationEnded(): boolean {
+        // disgusting
         return !this.transitioning() && !(Boolean(this.currentAnimation) && !this.currentAnimation!.animation.animationEnded());
     }
 
@@ -53,24 +57,28 @@ export class Animator {
 
         this._loopAnimation = value;
 
-        if (this._loopAnimation) {
-            // We only need to act here if...
-            // - The current animation has ended (otherwise we will loop in animate)
-            // - The next animation hasn't been defined
-
-            if (this.animationEnded()) {
-                this.currentAnimation?.animation.resetAnimation();
-            }
+        if (this._loopAnimation && this.animationEnded()) {
+            this.currentAnimation?.animation.resetAnimation();
         }
     }
 
+    /**
+     * Moves the servos according to the current transititon and animation
+     */
     public animate() {
         if (this.animationEnded()) {
             // No animation is playing currently
+
+            this.client?.sendInfo('animation-state', "Animation ended");
+
             return;
         }
 
         if (this.transitioning()) {
+            // We are transitioning
+            
+            this.client?.sendInfo('animation-state', "Transitioning");
+
             this.handleAnimation(this.transitionAnimation!);
             
             if (!this.transitionAnimation!.animation.animationEnded()) {
@@ -86,6 +94,8 @@ export class Animator {
             return;
         }
 
+        this.client?.sendInfo('animation-state', "Animating");
+
         this.handleAnimation(this.currentAnimation!);
 
         if (this.currentAnimation!.animation.animationEnded() && this.loopAnimation) {
@@ -93,20 +103,14 @@ export class Animator {
         }
     }
 
-    private handleAnimation(animationObject: AnimationObject) {
-        const position: Position = animationObject.animation.animate();
 
-        if (this.currentAnimation!.keepHeadStill) {
-            HEAD_SERVOS.forEach(headServo => {
-                position.servos[headServo] = null;
-            });
-        }
-
-        this.raspberry.setServos(position);
-    }
-
+    /**
+     * Start transitioning to the start of the currentAnimation
+     */
     public animateToStart() {
-        this.status = "Restarting current animation..."
+        if (!this.currentAnimation) {
+            return;
+        }
 
         // Gets the position at the start of the animation
         const startPosition: Position = this.currentAnimation!.animation.getPosition(0);
@@ -116,6 +120,29 @@ export class Animator {
             animation: animationToStart,
             keepHeadStill: false
         };
+
+        this.client?.sendInfo('animation-log', "Transitioning to start");
+    }
+
+    public animateToPosition(position: Position, duration = 1000) {
+        this.currentAnimation = null;
+        this.transitionAnimation = {
+            animation: this.animationToPosition(position, duration),
+            keepHeadStill: true
+        };
+
+        this.client?.sendInfo('animation-log', "Transitioning to a Position");
+    }
+
+    /**
+     * 
+     * @param boundingBox 
+     */
+    public lookAt(boundingBox: BoundingBox) {
+        const finalPosition = this.calculateHeadPosition(boundingBox);
+
+        // Not a complex animation that we would want to loop, so we only "transition" here
+        this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
     }
 
     public loadAnimation(animationName: string) {
@@ -156,6 +183,19 @@ export class Animator {
         this.setAnimation(newAnimation);
     }
 
+
+    private handleAnimation(animationObject: AnimationObject) {
+        const position: Position = animationObject.animation.animate();
+
+        if (this.currentAnimation!.keepHeadStill) {
+            HEAD_SERVOS.forEach(headServo => {
+                position.servos[headServo] = null;
+            });
+        }
+
+        this.raspberry.setServos(position);
+    }
+
     private setAnimation(animationObject: AnimationObject) {
         this.currentAnimation = animationObject;
         this.animateToStart();
@@ -164,8 +204,8 @@ export class Animator {
     private animationToPosition(position: Position, duration = 1000): Animation {
         // IF we don't know the current position, we "jump" to the given position...
         // this is fucking dumb and dangerous
-        const currentPosition = this.raspberry.servos ?? position;
-        if (currentPosition === position) {
+        const currentPosition = this.raspberry.getServos() ?? position;
+        if (currentPosition.equals(position)) {
             // If we jump straight away, why wait?
             duration = 0;
         }
@@ -190,25 +230,10 @@ export class Animator {
         return animation;
     }
 
-    public animateToPosition(position: Position, duration = 1000) {
-        this.currentAnimation = null;
-        this.transitionAnimation = {
-            animation: this.animationToPosition(position, duration),
-            keepHeadStill: true
-        };
-    }
-
-    public lookAt(boundingBox: BoundingBox) {
-        const finalPosition = this.calculateHeadPosition(boundingBox);
-
-        // Not a complex animation that we would want to loop, so we only "transition" here
-        this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
-    }
-
     private calculateHeadPosition(targetBoundingBox: BoundingBox): Position {
-        // THE REALLY FUCKING COMPLICATED SHIT
+        // THE REALLY COMPLICATED SHIT
 
-        // REMEMBER TO CONFIGURE THESE THEN
+        // TODO: REMEMBER TO CONFIGURE THESE THEN
         const imageWidth: number = OPTIONS.get("IMAGE_WIDTH");
         const imageHeight: number = OPTIONS.get("IMAGE_HEIGHT");
 

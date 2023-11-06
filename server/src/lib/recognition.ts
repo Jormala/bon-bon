@@ -9,11 +9,6 @@ import { OPTIONS } from "./options";
 
 export class Recognition {
     private model: any;
-    private minScore: number;
-
-    public constructor() {
-        this.minScore = OPTIONS.get('MIN_SCORE');
-    }
 
     public async runImageRecognition(base64Image: string): Promise<any[]> {
         if (!this.model) {
@@ -24,7 +19,7 @@ export class Recognition {
         // The complicated magic
         const imageBuffer = Buffer.from(base64Image, 'base64');
         const imageTensor = tf.node.decodeImage(imageBuffer);
-        const predictions = await this.model.detect(imageTensor, undefined, this.minScore);
+        const predictions = await this.model.detect(imageTensor, undefined, OPTIONS.get('MIN_SCORE'));
 
         return predictions;
     }
@@ -34,7 +29,6 @@ export class Recognition {
 
         console.log(`RECOGNITION: Objects: [ ${predictions.map((prediction: any) => `"${prediction.class}"`).join(', ')} ]`);
 
-        // "any" 🤮🤮🤮
         const firstPerson: any = predictions.filter(prediction => prediction.class == "person")
                                             .sort(prediction => prediction.score)[0];
         if (!firstPerson) {

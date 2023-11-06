@@ -4,7 +4,6 @@ import { Controller } from './lib/controller';
 
 const client = new WebClient();
 const raspberry = new Raspberry(client);
-const controller = new Controller(client, raspberry);
 
 
 async function getRunner(func: any) {
@@ -27,6 +26,8 @@ raspberry.connect().then((result) => {
         // Didnt't locate the raspberry on the network, exit the program.
         process.exit();
     }
+
+    const controller = new Controller(client, raspberry);
 
     getRunner(() => controller.cameraRunner());
     getRunner(() => controller.servoRunner());

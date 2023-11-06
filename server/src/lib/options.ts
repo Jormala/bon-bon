@@ -6,6 +6,10 @@ class Options {
     private saved: boolean = true;
 
     public constructor() {
+        this.load();
+    }
+
+    public load() {
         const rawOptions = fs.readFileSync(this.OPTIONS_PATH, 'utf8');
 
         this.options = JSON.parse(rawOptions);

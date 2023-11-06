@@ -3,6 +3,8 @@
  * Animations are made dynamic using "Animator"
  */
 
+import { OPTIONS } from "./options";
+
 
 // TODO: Name and implement these
 // don't change the order of this enum. it contains the format in which the data is send to the raspberry
@@ -56,35 +58,41 @@ function realServoValue(servo: Servo, value: number | null) {
  * Represents a position Bon-Bon can make
  */
 export class Position {
+    // thiis type is actually cursed
+    // you'd think it would mean an object like:
+    //  { Servo.Head1: number | null, Servo.Torso2: number | null, ... }
+    // BUT for some fucking reason it means the VALUES:
+    //  { 'head1': number | null, 'torso2': number | null, ... }
+    // this makes sense now, but WHYY would you make the value's be key of the enum??? especially
+    //  if i give the type `{ [key in Servo]: number | null }` then wouldn't you think that 
+    //  it means the KEYS from the `Servo` are the KEYS?
+    // like motherfucker what do you think [key in Servo] means? THE VALUE :DDDD
+    // TODO: Mayde declare this type? Used somewhat often
     public servos: { [key in Servo]: number | null };
 
     public constructor(servos: {[key in Servo]: number | null}) {
         this.servos = servos;
 
-        for (let [stringServo, value] of Object.entries(this.servos)) 
+        const keys: Servo[] = Object.keys(this.servos) as Servo[];
+        for (const servo of Object.values(Servo)) 
         {
-            // for some reason it thinks the keys are strings??
-            const servo = stringServo as Servo;
+            // All servos MUST be specified for each position
+            if (!keys.includes(servo)) {
+                throw Error("Servo wasn't specified");
+            }
 
-            this.servos[servo] = realServoValue(servo, value);
+            this.servos[servo] = realServoValue(servo, this.servos[servo]);
         }
     }
 
     public static fromJSON(servosJSON: any): Position {
-        // okay this whole method is kind of autistic
-        // it basically does the same thing as the constructor, but for an 'any' type
-        // i'm keeping this as if something else needs to be taken into account in the json.
-        // this would be a great place to parse that kind of shit
+        const servos: { [key in Servo]: number | null } = {} as any;  // `any` -moment
 
-        const servos = {} as any;  // VERY cursed
-        // this could be done backwards? it would assure no `undefined`:s make their way here
-        Object.entries(servosJSON).forEach(([rawServo, value]) => 
+        for (const servo of Object.values(Servo)) 
         {
-            // ugly casts. i hope this will throw an error if unable to do this
-            const servo = rawServo as Servo;
-
-            servos[servo] = realServoValue(servo, value as number | null);
-        });
+            // Specifies the unspecified servos as null
+            servos[servo] = servosJSON[servo] ?? null;
+        }
 
         return new Position(servosJSON);
     }
@@ -116,16 +124,11 @@ export class Position {
             const servo1 = pos1.servos[servo];
             const servo2 = pos2.servos[servo];
 
-            let interpolatedValue: number;
-            if (servo1 === null) {
-                interpolatedValue = servo2 as number;
+            if (servo1 === null || servo2 === null) {
+                throw Error("Cannot interpolate between 'null' values!");
             }
-            else if (servo2 === null) {
-                interpolatedValue = servo1 as number;
-            }
-            else {
-                interpolatedValue = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
-            }
+
+            let interpolatedValue: number = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
 
             returnServos[servo] = interpolatedValue;
         }
@@ -141,10 +144,34 @@ export class Position {
 
         return JSON.stringify(array);
     }
+
+    public equals(position: Position) {
+        for (const [servo, value] of Object.entries(this.servos)) 
+        {
+            if (position.servos[servo as Servo] !== value) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public fillWith(position: Position) {
+        for (const [rawServo, value] of Object.entries(this.servos)) 
+        {
+            const servo: Servo = rawServo as Servo;
+            const fillValue = position.servos[servo];
+
+            if (value === null && fillValue !== null) {
+                this.servos[servo] = fillValue;
+            }
+        }
+    }
 }
 
+// Maybe integrate this class into the "Animation" -class
 /**
- * Represents a frame of movement. 
+ * Represents a frame of movement.
  */
 export class Frame {
     public still: number;
@@ -157,21 +184,16 @@ export class Frame {
 
     public constructor(position: Position, startTime: number, still: number, speed: number) {
         this.position = position;
+        if (!this.position.allServosSpecified()) {
+            throw Error("Some servos have null values!");
+        }
+
         this.startTime = startTime;
         this.still = still;
         this.speed = speed;
 
         // How long each frame takes to execute
         this.duration = this.still + this.speed;
-    }
-
-    public static fromJSON(frameJSON: any, startTime: number): Frame {
-        return new Frame(
-            Position.fromJSON(frameJSON['position']),
-            startTime,
-            frameJSON.still,
-            frameJSON.speed
-        );
     }
 
     public static interpolate(previousFrame: Frame, currentFrame: Frame, timeSinceStart: number): Position | null {
@@ -203,7 +225,7 @@ export class Animation {
     public constructor(frames: Frame[]) {
         this.frames = frames;
         this.runTime = 0;
-        for (let f of this.frames) {
+        for (const f of this.frames) {
             this.runTime += f.duration;
         }
 
@@ -213,16 +235,41 @@ export class Animation {
     public static fromJSON(framesJSON: any[]): Animation {
         const frames = [];
 
+        const useFilling = OPTIONS.get('USE_FILLING') as boolean;
+
         let nextStartTime = 0;
-        for (let rawFrame of framesJSON) 
+        let lastPosition: Position | null = null;
+        for (let rawFrame of framesJSON)
         {
-            const frame = Frame.fromJSON(rawFrame, nextStartTime);
-            if (!frame.position.allServosSpecified()) {
-                throw Error("Not all positions were specified!");
+            // A pretty weird option
+            // Basically fills the position undefined (null) values with the vaules of the last position
+            // For example image the following positions:
+            // { head1:   10, torso2: 20,   eye3: 50   }
+            // { head1:    0, torso2: null, eye3: null }
+            // { head1: null, torso2: null, eye3: 30   }
+            //
+            // If filling was off, the above would crash as some values are clearly undefined.
+            // But with filling turned on, the above would be interpolated as:
+            // { head1:   10, torso2: 20,   eye3: 50   }
+            // { head1:    0, torso2: 20,   eye3: 50   }  // 'torso2' and 'eye3' use values from the last position
+            // { head1:    0, torso2: 20,   eye3: 30   }  // 'head1' and 'torso2' use last positions again, but 'eye3' gets a new value
+            // Note that if the first position has even a single null value this still 
+            //  crashes, as there's no previous value to get values from.
+
+            const position = Position.fromJSON(rawFrame.position);
+            if (useFilling && lastPosition) {
+                position.fillWith(lastPosition);
             }
 
+            const frame = new Frame(
+                position,
+                nextStartTime,
+                rawFrame.still,
+                rawFrame.speed
+            );
             frames.push(frame);
 
+            lastPosition = position;
             nextStartTime += frame.duration;
         }
 

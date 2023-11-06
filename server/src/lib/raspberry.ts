@@ -3,17 +3,18 @@ const ip = require('ip');
 import WebSocket from 'ws';
 
 import { WebClient } from './webclient';
-import { Position } from './animation';
+import { Position, Servo } from './animation';
 
 import { OPTIONS } from './options'
 
 
 export class Raspberry {
     private servoClient?: WebSocket;
-    private _servos?: Position;
+    private _servos: Position | null = null;
 
     private raspberryIp?: string;
     private cameraEndpoint?: string;
+    private servoGetEndpoint?: string;
 
     private readonly RASPBERRY_PORT: number;
     private readonly CAMERA_TIMEOUT: number;
@@ -34,24 +35,28 @@ export class Raspberry {
         }
 
         this.cameraEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/camera`;
+        this.servoGetEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo/get`;
 
         console.log('RASPBERRY: Trying to establish connection to Raspberry...');
         this.servoClient = this.constructClient();
+
+        if (!await waitFor(() => this._servos !== null)) {
+            throw Error("Failed to get initial servo values!");
+        }
 
         return true;
     }
 
     private constructClient(): WebSocket {
         // this doesn't need to be constructed EVERYtime here. too lazy to move
-        const servoEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo`;
+        const servoEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo/set`;
 
         const servoClient: WebSocket = new WebSocket(servoEndpoint);
 
         servoClient.on('open', async() => {
             console.log("RASPBERRY: Established connection!");
 
-            // TODO: Implement this
-            // this._servos = await this.fetchServos();
+            await this.getInitialServoValues();
         });
 
         servoClient.on('close', () => {
@@ -70,34 +75,6 @@ export class Raspberry {
         return servoClient;
     }
 
-    public servoEndpointOpen(): boolean {
-        if (!this.servoClient) {
-            return false;
-        }
-
-        return this.servoClient.readyState === WebSocket.OPEN;
-    }
-
-    /**
-     * Sends data to the servo endpoint.
-     * 
-     * @param servoData Data send to the servos. **Needs to be formatted correctly.**
-     */
-    public setServos(position: Position) {
-        if (!this.servoEndpointOpen()) {
-            return;
-        }
-
-        this._servos = position;
-        this.servoClient!.send(position.toString());
-    }
-
-    // TODO: Make this an async method. 
-    // We usually want to be sure about the servo values and are willing to wait to get the ACTUAL
-    // servo values (thinking of Animator).
-    public get servos() {
-        return this._servos;
-    }
 
     /**
      * Fetches Bon-Bon's vision. Throws an error if camera time's out
@@ -116,17 +93,18 @@ export class Raspberry {
         catch (err) {
             this.client.sendInfo('camera-response-time', "TIMED OUT");
             this.client.sendInfo('log', "Camera timed out")
+
             throw err;
         }
 
         const responseTime = Date.now() - startTime;
-        console.log(`RASPBERRY: Camera query took ${responseTime}ms`)
 
+        console.log(`RASPBERRY: Camera query took ${responseTime}ms`)
         this.client.sendInfo('camera-response-time', `${responseTime}ms`);
 
         if (response.status != 200) {
             // This shouldn't EVER happen. 
-            console.log("mitä vittua 1");
+            console.log("mitä vittua");
             console.log(response);
             throw new Error("Bad status");
         }
@@ -134,18 +112,61 @@ export class Raspberry {
         return response.data as string;
     }
 
-    private static async testHttp(ip: string, port: number): Promise<boolean> {
-        try {
-            const http = `http://${ip}:${port}`;
 
-            // If you have an bad connection, it may help to make the 'timeout' -value bigger (if you can't find the ip)
-            await axios.get(http, { timeout: 500 });
+    public getServos(): Position {
+        return this._servos!;
+    }
+
+    private async getInitialServoValues() {
+        console.log("RASPBERRY: Quering the /servo/get/ endpoint");
+
+        let response: any;
+        try {
+            response = await axios.get(this.servoGetEndpoint, { timeout: 3000 });
         }
         catch (err) {
-            return false;
+            console.error(err);
+
+            console.log("RASPBERRY: Timed out when quering /servo/get/");
+            this.client.sendInfo('log', "Timed out when quering /servo/get/");
+
+            throw err;
         }
 
-        return true;
+        console.log("RASPBERRY: Succesfully queried the endpoint");
+
+        // We except to recive list of servo values
+        const data = response!.data;
+
+        const servoValues: any = {};
+        Object.values(Servo).forEach((servo, index) => {
+            // console.log(servo, data, index)
+            servoValues[servo as Servo] = data[index] as number;
+        });
+
+        this._servos = new Position(servoValues);
+    }
+
+    /**
+     * Sends data to the servo endpoint.
+     * 
+     * @param servoData Data send to the servos. **Needs to be formatted correctly.**
+     */
+    public setServos(position: Position) {
+        if (!this.servoEndpointOpen()) {
+            return;
+        }
+
+        // TODO
+        // Here filter out the "null's"
+        
+
+        this._servos = position;
+        this.servoClient!.send(position.toString());
+    }
+
+    private servoEndpointOpen(): boolean {
+        return this.servoClient?.readyState === WebSocket.OPEN;
     }
 
     /**
@@ -158,7 +179,7 @@ export class Raspberry {
     private async getIPV4(port: number): Promise<boolean> {
         const previousIp: string = OPTIONS.get('RASPBERRY_IP');
 
-        if (await Raspberry.testHttp(previousIp, port)) {
+        if (await testHttp(previousIp, port)) {
             this.raspberryIp = previousIp;
             return true;
         }
@@ -205,9 +226,10 @@ export class Raspberry {
         }
 
         let tests = [];
-        for (let ip of ips) {
+        for (let ip of ips) 
+        {
             const test: Test = {
-                promise: Raspberry.testHttp(ip, port).then(result => test.result = result),
+                promise: testHttp(ip, port).then(result => test.result = result),
                 result: false,
                 ip: ip
             };
@@ -232,4 +254,44 @@ export class Raspberry {
 
         return true;
     }
+}
+
+
+/**
+ * Tests if the http contains a service.
+ * 
+ * @param host
+ * @param port
+ * @returns Whether or not the http contains some service
+ */
+async function testHttp(host: string, port: number): Promise<boolean> {
+    try {
+        const http = `http://${host}:${port}`;
+
+        // If you have a slow connection, it may help to make the 'timeout' -value bigger (if you can't find the ip)
+        await axios.get(http, { timeout: 500 });
+    }
+    catch (err) {
+        return false;
+    }
+
+    return true;
+}
+
+
+async function waitFor(func: () => any): Promise<boolean> {
+    return new Promise((resolve) => {
+        const id = setInterval(() => {
+            // We only verify the servo endpoint because imalazy
+            if (func()) {
+                clearInterval(id);
+                resolve(true);
+            }
+        }, 50);
+
+        setTimeout(() => {
+            clearInterval(id);
+            resolve(false);
+        }, 10000);
+    });
 }
