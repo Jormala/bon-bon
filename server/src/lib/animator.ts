@@ -1,9 +1,10 @@
+import fs from 'fs';
+
+import { WebClient } from './webclient';
 import { Raspberry } from './raspberry';
 import { Animation, Frame, Position, HEAD_SERVOS } from './animation';
-import { OPTIONS } from './options';
 
-import fs from 'fs';
-import { WebClient } from './webclient';
+import { OPTIONS } from './options';
 
 
 export type BoundingBox = [number, number, number, number]
@@ -30,7 +31,7 @@ export class Animator {
     // A "temporary" animation that's used to transition between frames
     private transitionAnimation: AnimationObject | null = null;
 
-    private readonly ANIMATIONS_PATH: string = "res/animations.json";
+    private static readonly ANIMATIONS_PATH: string = "res/animations.json";
 
     public constructor(raspberry: Raspberry, client?: WebClient) {
         this.raspberry = raspberry;
@@ -63,7 +64,7 @@ export class Animator {
     }
 
     /**
-     * Moves the servos according to the current transititon and animation
+     * Moves the servos according to the current animation
      */
     public animate() {
         if (this.animationEnded()) {
@@ -103,7 +104,6 @@ export class Animator {
         }
     }
 
-
     /**
      * Start transitioning to the start of the currentAnimation
      */
@@ -124,6 +124,12 @@ export class Animator {
         this.client?.sendInfo('animation-log', "Transitioning to start");
     }
 
+    /**
+     * Transitions to the given position
+     * 
+     * @param position The position to transition to
+     * @param duration How long the transition takes
+     */
     public animateToPosition(position: Position, duration = 1000) {
         this.currentAnimation = null;
         this.transitionAnimation = {
@@ -134,10 +140,6 @@ export class Animator {
         this.client?.sendInfo('animation-log', "Transitioning to a Position");
     }
 
-    /**
-     * 
-     * @param boundingBox 
-     */
     public lookAt(boundingBox: BoundingBox) {
         const finalPosition = this.calculateHeadPosition(boundingBox);
 
@@ -145,9 +147,17 @@ export class Animator {
         this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
     }
 
+    /**
+     * Tries to load an animation from "res/animations.json" \
+     * This method throws an error if:
+     * 1. File contains invalid JSON
+     * 2. Animation isn't defined
+     * 3. Animation is invalid *(e.g. not all servos are specified)*
+     * @param animationName `name` field of the animation
+     */
     public loadAnimation(animationName: string) {
-        // Reason we load every time, is so we can edit the animation data during runtime and then update
-        const data: string = fs.readFileSync(this.ANIMATIONS_PATH, 'utf8');
+        // Reason we load every time, is so we can edit the animation data during runtime
+        const data: string = fs.readFileSync(Animator.ANIMATIONS_PATH, 'utf8');
 
         let loadedAnimations;
         try {
@@ -159,18 +169,19 @@ export class Animator {
                 throw new SyntaxError(`JSON parsing Error "${err.message}"`);
             }
 
-            throw err
+            throw err;
         }
 
-        let foundAnimation = undefined;
+        let foundAnimation: any = null;
         for (let animation of loadedAnimations) 
         {
             if (animation.name === animationName) {
                 foundAnimation = animation;
+                break;
             }
         }
 
-        if (foundAnimation === undefined) {
+        if (foundAnimation === null) {
             throw Error(`Didn't find a animation with the name '${animationName}'`);
         }
 
@@ -237,6 +248,7 @@ export class Animator {
         const imageWidth: number = OPTIONS.get("IMAGE_WIDTH");
         const imageHeight: number = OPTIONS.get("IMAGE_HEIGHT");
 
+        // currently this will actually crash :D
         return new Position({} as any);
     }
 }
