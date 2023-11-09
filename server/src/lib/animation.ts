@@ -1,13 +1,9 @@
-/**
- * This document specifies the components needed to make an non dynamic animation
- * Animations are made dynamic using "Animator"
- */
-
 import { OPTIONS } from "./options";
 
 
 // TODO: Name and implement these
 // don't change the order of this enum. it contains the format in which the data is send to the raspberry
+// /\/\/\ autistic /\/\/\
 export enum Servo {
     Head1 = 'head1',
     Torso2 = 'torso2',
@@ -15,8 +11,23 @@ export enum Servo {
 }
 
 /**
- * The servos that are required for head movement, and that we DON'T want
- * to move when an animation is playing.
+ * Represents a value that can be sent to a servo.
+ */
+type ServoValue = number | null;  // "null" means "do nothing" or "keep the last value"
+
+// this type is actually cursed
+// you'd think it would mean an object like:
+//  { Servo.Head1: ServoValue, Servo.Torso2: ServoValue, ... }
+// BUT for some fucking reason it means the VALUES:
+//  { 'head1': ServoValue, 'torso2': ServoValue, ... }
+// this makes sense now, but WHYY would you make the values be keys of the enum??? especially
+//  if i give the type `{ [key in Servo]: ServoValue }` then wouldn't you think that 
+//  it means the KEYS from `Servo` are, you know, KEYS?
+// like motherfucker what do you think [key in Servo] means? THE VALUE :DDDD
+type Servos =  { [key in Servo]: ServoValue };
+
+/**
+ * Servos that are required for head movement.
  */
 export const HEAD_SERVOS: Servo[] = [ Servo.Head1, Servo.Eye3 ];
 
@@ -32,72 +43,68 @@ function constrain(value: number, min: number, max: number) {
 }
 
 
-function realServoValue(servo: Servo, value: number | null) {
+function realServoValue(value: ServoValue, servo: Servo) {
     if (value === null) {
         return value;
     }
 
-    // Only use `mapFrom100` method here, as all values should be 
-    //  originally given as number between [0, 100]
+    const CONSTRAINS = OPTIONS.get("SERVO_CONSTRAITS");
+    const limits = CONSTRAINS[servo];
 
-    // TODO: Implement the ranges here
-    // Implement the Servo enum first
-    // The values could probably be defined in a JSON
-    switch (servo) 
-    {
-        // case Servo.Head1:
-        // case Servo.Torso2:
-        //     return mapFrom100(value, 0, 100);
+    // i'm scared
+    value = constrain(value, 0, 100);
+    const min = constrain(limits.min, 0, 100);
+    const max = constrain(limits.max, 0, 100);
 
-        default:  // No mapping needed
-            return value;
-    }
+    // Some warning checks that i don't want to do
+    // if (min !== limits.min) {
+    //     console.log(`WARNING: Had to constrain MIN of ${servo}`);
+    // }
+
+    // if (max !== limits.max) {
+    //     console.log(`WARNING: Had to constrain MAX of ${servo}`);
+    // }
+
+    return mapFrom100(value, min, max);
 }
 
 /**
  * Represents a position Bon-Bon can make
  */
 export class Position {
-    // thiis type is actually cursed
-    // you'd think it would mean an object like:
-    //  { Servo.Head1: number | null, Servo.Torso2: number | null, ... }
-    // BUT for some fucking reason it means the VALUES:
-    //  { 'head1': number | null, 'torso2': number | null, ... }
-    // this makes sense now, but WHYY would you make the value's be key of the enum??? especially
-    //  if i give the type `{ [key in Servo]: number | null }` then wouldn't you think that 
-    //  it means the KEYS from the `Servo` are the KEYS?
-    // like motherfucker what do you think [key in Servo] means? THE VALUE :DDDD
-    // TODO: Mayde declare this type? Used somewhat often
-    public servos: { [key in Servo]: number | null };
+    private readonly servos: Servos;
+    private readonly raw_servos: Servos;
 
-    public constructor(servos: {[key in Servo]: number | null}) {
-        this.servos = servos;
+    public constructor(servos: Servos) {
+        this.raw_servos = servos;
+        this.servos = structuredClone(servos);  // holy hell
 
         const keys: Servo[] = Object.keys(this.servos) as Servo[];
         for (const servo of Object.values(Servo)) 
         {
             // All servos MUST be specified for each position
             if (!keys.includes(servo)) {
-                throw Error("Servo wasn't specified");
+                throw Error(`Servo "${servo}" wasn't specified`);
             }
 
-            this.servos[servo] = realServoValue(servo, this.servos[servo]);
+            let value: ServoValue = this.servos[servo];
+            this.servos[servo] = realServoValue(value, servo);
         }
     }
 
     public static fromJSON(servosJSON: any): Position {
-        const servos: { [key in Servo]: number | null } = {} as any;  // `any` -moment
+        const servos: Servos = {} as any;  // `any` -moment
 
         for (const servo of Object.values(Servo)) 
         {
-            // Specifies the unspecified servos as null
+            // Automatically specifies the unspecified servos as null
             servos[servo] = servosJSON[servo] ?? null;
         }
 
         return new Position(servosJSON);
     }
 
-    public allServosSpecified() {
+    public allServosSpecified(): boolean {
         const specifiedServos: Servo[] = Object.keys(this.servos).map(rawServo => <Servo>rawServo);
         for (const servo of Object.values(Servo))
         {
@@ -116,11 +123,17 @@ export class Position {
         return true;
     }
 
+    public setServo(servo: Servo, value: ServoValue) {
+        this.raw_servos[servo] = value;
+        this.servos[servo] = realServoValue(value, servo);
+    }
+
     public static interpolate(pos1: Position, pos2: Position, p: number): Position | null {
-        p = constrain(p, 0, 1);
+        p = constrain(p, 0, 1);  // i'm scared
 
         const returnServos: any = {};
-        for (let servo of Object.values(Servo)) {
+        for (let servo of Object.values(Servo)) 
+        {
             const servo1 = pos1.servos[servo];
             const servo2 = pos2.servos[servo];
 
@@ -128,6 +141,7 @@ export class Position {
                 throw Error("Cannot interpolate between 'null' values!");
             }
 
+            // this one line powers basically everything about animating
             let interpolatedValue: number = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
 
             returnServos[servo] = interpolatedValue;
@@ -137,18 +151,34 @@ export class Position {
     }
 
     public toString(): string {
-        const array: (number | null)[] = [];
-        for (const servo of Object.values(Servo)) {
+        const array: (ServoValue)[] = [];
+        for (const servo of Object.values(Servo)) 
+        {
             array.push(this.servos[servo]);
         }
 
         return JSON.stringify(array);
     }
 
-    public equals(position: Position) {
-        for (const [servo, value] of Object.entries(this.servos)) 
+    public toStringRaw(): string {
+        const array: (ServoValue)[] = [];
+        for (const servo of Object.values(Servo)) 
         {
-            if (position.servos[servo as Servo] !== value) {
+            array.push(this.raw_servos[servo]);
+        }
+
+        return JSON.stringify(array);       
+    }
+
+    /**
+     * Check if a position equals this position
+     * @param position The position to compare against
+     * @returns Whether the positions equal each other
+     */
+    public equals(position: Position): boolean {
+        for (const servo of Object.values(Servo)) 
+        {
+            if (this.servos[servo] !== position.servos[servo]) {
                 return false;
             }
         }
@@ -156,14 +186,20 @@ export class Position {
         return true;
     }
 
+    /**
+     * Fill any null values with the specified `position`
+     * @param position Position to fill the null values with
+     */
     public fillWith(position: Position) {
-        for (const [rawServo, value] of Object.entries(this.servos)) 
+        for (const servo of Object.values(Servo)) 
         {
-            const servo: Servo = rawServo as Servo;
-            const fillValue = position.servos[servo];
+            const originalValue = this.servos[servo];
+            const fillValue = position.servos[servo];  // ??? why can I access a PRIVATE method here??
 
-            if (value === null && fillValue !== null) {
+            if (originalValue === null && fillValue !== null) {
                 this.servos[servo] = fillValue;
+
+                this.raw_servos[servo] = position.raw_servos[servo];  // same here whaat
             }
         }
     }
@@ -184,6 +220,7 @@ export class Frame {
 
     public constructor(position: Position, startTime: number, still: number, speed: number) {
         this.position = position;
+
         if (!this.position.allServosSpecified()) {
             throw Error("Some servos have null values!");
         }
@@ -225,8 +262,8 @@ export class Animation {
     public constructor(frames: Frame[]) {
         this.frames = frames;
         this.runTime = 0;
-        for (const f of this.frames) {
-            this.runTime += f.duration;
+        for (const frame of this.frames) {
+            this.runTime += frame.duration;
         }
 
         this.resetAnimation();
@@ -280,7 +317,6 @@ export class Animation {
         this.currentTime = 0;
         this._animationEnded = false;
         this.previousTime = undefined;
-        // this.previousTime = Date.now();
     }
 
     public animationEnded(): boolean {

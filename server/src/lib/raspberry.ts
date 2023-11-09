@@ -11,6 +11,7 @@ import { OPTIONS } from './options'
 export class Raspberry {
     private servoClient?: WebSocket;
     private _servos: Position | null = null;
+    private connected: boolean = false;
 
     private raspberryIp?: string;
     private cameraEndpoint?: string;
@@ -29,9 +30,9 @@ export class Raspberry {
         this.CAMERA_TIMEOUT = OPTIONS.get("CAMERA_TIMEOUT");
     }
 
-    public async connect(): Promise<boolean> {
+    public async connect() {
         if (!await this.getIPV4(this.RASPBERRY_PORT)) {
-            return false;
+            throw Error("Failde to get the Raspberry Pi's IPV4 address");
         }
 
         this.cameraEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/camera`;
@@ -57,18 +58,28 @@ export class Raspberry {
             console.log("RASPBERRY: Established connection!");
 
             await this.getInitialServoValues();
+
+            this.connected = true;
         });
 
         servoClient.on('close', () => {
+            this.connected = false;
+
             console.log("RASPBERRY: Lost connection");
 
-            setTimeout(r => {
+            this.client.sendInfo('log', "Server lost connection with the Raspberry");
+
+            setTimeout(() => {
                 console.log("RASPBERRY: Reconnecting...")
+                this.client.sendInfo('log', "Server is trying to reconnect with the Raspberry...");
+
                 this.servoClient = this.constructClient();
             }, 3000);
         });
 
         servoClient.on('error', () => {
+            this.connected = false;
+
             console.log("RASPBERRY: Failed to connect");
         });
 
@@ -112,9 +123,12 @@ export class Raspberry {
         return response.data as string;
     }
 
-
     public getServos(): Position {
         return this._servos!;
+    }
+
+    public isConnected(): boolean {
+        return this.connected;
     }
 
     private async getInitialServoValues() {
@@ -157,12 +171,14 @@ export class Raspberry {
             return;
         }
 
-        // TODO
-        // Here filter out the "null's"
-        
-
-        this._servos = position;
         this.servoClient!.send(position.toString());
+
+        // We don't want to store the null values, so we fill them with the previous servo values
+        position.fillWith(this._servos!);
+        this._servos = position;
+
+        this.client.sendInfo('current-servos', position.toString())
+        this.client.sendInfo('current-raw-servos', position.toStringRaw())
     }
 
     private servoEndpointOpen(): boolean {
@@ -177,10 +193,10 @@ export class Raspberry {
      * @returns Whether succesful in locating the Raspberry Pi on the network.
      */
     private async getIPV4(port: number): Promise<boolean> {
-        const previousIp: string = OPTIONS.get('RASPBERRY_IP');
+        const savedIp: string = OPTIONS.get('RASPBERRY_IP');
 
-        if (await testHttp(previousIp, port)) {
-            this.raspberryIp = previousIp;
+        if (await testHttp(savedIp, port)) {
+            this.raspberryIp = savedIp;
             return true;
         }
 

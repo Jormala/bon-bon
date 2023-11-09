@@ -1,4 +1,7 @@
+const SERVO_ORDER = ["head1", "torso2", "eye3"];
+
 let socket;
+
 
 // Helper functions
 function getElement(id) {
@@ -7,10 +10,10 @@ function getElement(id) {
 function setElementText(id, text) {
     getElement(id).innerText = text;
 }
-function log(text) {
+function log(text, logType="log") {
     for (let j in Array.from(Array(9))) {
         const i = 9 - j;
-        document.getElementById(`log-${i}`).innerText = document.getElementById(`log-${i - 1}`).innerText;
+        document.getElementById(`${logType}-${i}`).innerText = document.getElementById(`${logType}-${i - 1}`).innerText;
     }
 
     const now = new Date();
@@ -20,7 +23,7 @@ function log(text) {
 
     const timestamp = `${hours}:${minutes}:${seconds}`;
 
-    document.getElementById("log-0").innerText = `${timestamp} - ${text}`;
+    document.getElementById(`${logType}-0`).innerText = `${timestamp} - ${text}`;
 }
 
 
@@ -77,11 +80,12 @@ function handleMessage(event) {
     const type = json.type;
     const data = json.data;
     switch (type) {
-        case 'vision':
+        case 'vision': {
             getElement('vision').src = data;
             break;
+        }
         
-        case 'person-bbox':
+        case 'person-bbox': {
             const sourceImage = getElement('vision');
             const destinationImage = getElement('target');
 
@@ -104,18 +108,70 @@ function handleMessage(event) {
             destinationImage.src = rectImageUrl;
 
             break;
+        }
         
-        case 'camera-response-time':
+        case 'camera-response-time': {
             setElementText('camera-response-time', data);
             break;
+        }
 
-        case 'log':
-            log(data)
-            break
-
-        default:
-            console.log("Unknown type: " + type);
+        case 'animation-log': {
+            log(data, 'animation-log');
             break;
+        }
+
+        case 'log': {
+            log(data);
+            break;
+        }
+
+        case 'animation-state': {
+            setElementText('animation-status', data);
+            break;
+        }
+
+        case 'servo-cycle': {
+            setElementText('servo-cycle', data);
+            break;
+        }
+        case 'camera-cycle': {
+            setElementText('camera-cycle', data);
+            break;
+        }
+
+        case 'current-servos': {
+            const parsedJSON = JSON.parse(data);
+            
+            let formattedData = "";
+            parsedJSON.forEach((value, index) => {
+                // what a mess
+                formattedData += `${SERVO_ORDER[index]}: ${value}\n`;
+            });
+
+            setElementText('current-servos', formattedData);
+            break;
+        }
+
+        case 'current-raw-servos': {
+            const parsedJSON = JSON.parse(data);
+
+            formattedData = "";
+            parsedJSON.forEach((value, index) => {
+                // what a mess
+                formattedData += `${SERVO_ORDER[index]}: ${value}\n`;
+            });
+
+            setElementText('current-raw-servos', formattedData);
+            break;
+        }
+
+        default: {
+            const unknownTypeMessage = `Received an unknown type: ${type}`
+
+            console.log(unknownTypeMessage);
+            log(unknownTypeMessage);
+            break;
+        }
     }
 }
 

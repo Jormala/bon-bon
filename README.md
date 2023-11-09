@@ -7,20 +7,20 @@ This repo contains all the code to use and contol Bon-Bon accordingly.
 ### Prerequisites
 
 - [Node.js v18.13.0+](https://nodejs.org/en)
-  - *Developed mostly on `v18.13.0`*
-- npm *(should installed come with node.js)*
+  - *Developed mostly on `v18.13.0` and `v20.9.0`*
+- npm *(should come installed with node.js)*
 - Some cool ass [code editor](https://notepad-plus-plus.org/) for debugging when the shit hits the fan.
 
 ### Server
 
 *The "brain" of the project.*
 
-Go to the `server` -directory and run `npm install`. This will install the required packages for the server to function. *You only have to do this once.*
+Go to the `server` -directory and run `npm install` *(or `npm ci`)*. This will install the required packages for the server to function. See [troubleshitting](#Troubleshooting) if this fails *You only have to do this once.*
 
 After this everytime you want to start the server, run `node server.js` in this folder.
 
 The server will not do anything if:
-1. It cannot find a node-red instance in the local network. *(check [here]() if you have problems finding your Raspberry Pi)*
+1. It cannot find a node-red instance in the local network.
 1. A [client](#client) isn't running.
 
 *You should keep an eye out for the console even though the client exists, as most of the errors aren't forwarded back to the client*
@@ -48,14 +48,34 @@ TODO
 
 ### "I cannot `npm install`"
 
-I have no idea what can cause this. *Make sure you have `npm` and `node` installed?*
+Alright, so *if* the problem is caused by the package `@tensorflow/tfjs-node`, I might have the stupidest solution to a problem I've EVER witnessed.
+
+So for me, the problem was that **`npm` was trying to copy the a file from `@tensorflow/tfjs-node/dist/tensorflow.dll` to `@tensorflow/tfjs-node/lib/napi-v9/tensorflow.dll`**
+
+The problem with this is `npm` creates a folder named `napi-v8` and the copying fails!
+
+This results in the most ass hack ever I've ever done:
+
+1. Start `npm install` usual.
+1. Monitor the `@tensorflow/tfjs-node/` in file manager or something.
+1. When the folder `lib` appears IMMEDIATELY create a new folder named `napi-v9` in it! 
+    - *I recommend using the command ```mkdir "node_modules\@tensorflow\tfjs-node\lib\napi-v9\"``` and running it when `lib` folder appears*
+1. The `npm install` should finish normally if you succeed.
+1. Check that the folder that you created contains 2 files: `tensorflow.dll` and `tfjs_bindings.node`. If they aren't present, run `npm rebuild @tensorflow/tfjs-node --build-addon-from-source`
+
+BUT after this you have to rename the folder BACK to `napi-v8`. 
+
+**WHY??**
+
+Because it turns out everything is horrible and I have no idea why `npm` tries to copy into `napi-v9` instead of `napi-v8` **WHEN THE MODULE IS USED FROM THERE WTF!!**
+
 
 
 ### *"I cannot locate my Raspberry Pi"*
 
 *I assume that you've tried to launch the program and it starts yelling at you right away and/or exits.*
 
-**TLDR; Find the Raspberry Pi's IP in your local network.**:w
+**TLDR; Find the Raspberry Pi's IP in your local network.**
 
 LR; The easiest solution for this is to launch the Rasperry Pi, and look what IP is given to it from there. (or using some other *fancy* way). Either way, ***finding the Rasperry Pi's IP is the most pain in the ass in this whole process.***
 

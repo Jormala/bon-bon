@@ -89,9 +89,13 @@ export class Animator {
 
             // Discard the "transitionAnimation", as it's unreliable to keep
             this.transitionAnimation = null;
+            this.client?.sendInfo('animation-log', "Finished transitioning")
 
             // Reset the "real" animation (if one is set)
-            this.currentAnimation?.animation.resetAnimation();
+            if (this.currentAnimation) {
+                this.currentAnimation!.animation.resetAnimation();
+                this.client?.sendInfo('animation-log', "Starting animation");
+            }
             return;
         }
 
@@ -99,7 +103,12 @@ export class Animator {
 
         this.handleAnimation(this.currentAnimation!);
 
-        if (this.currentAnimation!.animation.animationEnded() && this.loopAnimation) {
+        if (this.currentAnimation!.animation.animationEnded()) {
+            this.client?.sendInfo('animation-log', "Animation finished");
+
+            if (!this.loopAnimation) {
+                return;
+            }
             this.animateToStart();
         }
     }
@@ -134,7 +143,7 @@ export class Animator {
         this.currentAnimation = null;
         this.transitionAnimation = {
             animation: this.animationToPosition(position, duration),
-            keepHeadStill: true
+            keepHeadStill: false
         };
 
         this.client?.sendInfo('animation-log', "Transitioning to a Position");
@@ -198,9 +207,9 @@ export class Animator {
     private handleAnimation(animationObject: AnimationObject) {
         const position: Position = animationObject.animation.animate();
 
-        if (this.currentAnimation!.keepHeadStill) {
+        if (animationObject!.keepHeadStill) {
             HEAD_SERVOS.forEach(headServo => {
-                position.servos[headServo] = null;
+                position.setServo(headServo, null);
             });
         }
 
@@ -220,6 +229,13 @@ export class Animator {
             // If we jump straight away, why wait?
             duration = 0;
         }
+
+        // I bet this can be optimized, as if we have nulls, then we don't have to move those servos
+        // This would mean that we can just send null to the Raspberry, no need to send the current servo position
+        // 1. Would be faster in node red, as it doesn't have to send many inputs to many servos
+        // 2. Would be faster here, as we don't have to interpolate between the same value (imagine interpolating between 45 to 45)
+        // but i'm too lazy to do actually implement this :///
+        position.fillWith(currentPosition);
 
         const animation = new Animation(
             [

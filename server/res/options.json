@@ -1,10 +1,29 @@
 {
-    "RASPBERRY_IP": "192.168.1.132",
+    "RASPBERRY_IP": "localhost",
     "RASPBERRY_PORT": 1880,
     "RECEIVED_IMAGE_TYPE": "jpg",
     "CAMERA_TIMEOUT": 10000,
     "MIN_SCORE": 0.5,
     "IMAGE_WIDTH": 720,
     "IMAGE_HEIGHT": 480,
-    "USE_FILLING": true
+    "USE_FILLING": true,
+    "SLEEP": 50,
+    "LOOK_FOR_ANIMATION": 10,
+    "ACT_ANIMATIONS": [
+        "wave"
+    ],
+    "SERVO_CONSTRAITS": {
+        "head1": {
+            "min": 10,
+            "max": 90
+        },
+        "torso2": {
+            "min": 0,
+            "max": 100
+        },
+        "eye3": {
+            "min": 25,
+            "max": 75
+        }
+    }
 }

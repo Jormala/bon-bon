@@ -5,173 +5,268 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bon-Bon Control Panel</title>
 
-    <style>
-        * {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            box-sizing: border-box;
-        }
-
-        .info-table {
-            border-collapse: collapse;
-            border: solid black 1px;
-            border-radius: 5px;
-
-            width: 500px;
-        }
-
-        /* WHAT THE FUCK IS A `tbody` ELEMENT IN MY MOTHERF#@KING TABLES 
-        I SPEND AN HOUR DEBUGGING THIS SHIT */
-        .info-table > tbody > tr > td {
-            padding: 1rem;
-            border: solid black 1px;
-            border-radius: 5px;
-        }
-
-        .info-table > tbody > tr > td:first-child {
-            width: 40%;
-            background-color: antiquewhite;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        
-        .info-table > tbody > tr > td:not(:first-child) {
-            background-color: whitesmoke;
-        }
-
-        #logging-table {
-            
-        }
-
-        #logging-table tr td:first-of-type:after {
-            content: '.';
-        }
-
-        #logging-table code {
-            font-size: 1rem;
-        }
-
-        code {
-            font-size: 1.5rem;
-            font-family: 'Courier New', Courier, monospace;
-        }
-
-        img {
-            width: 100%;
-            height: auto;
-        }
-    </style>
-
-    <!-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
+    <link href="styles.css" rel="stylesheet">
     <script src="front-end.js" defer></script>
 </head>
 <body>
     <h1>Bon-Bon Control Panel</h1>
-    <h2>Info</h2>
+    <div id="container">
+        <div>
+            <h2>Info</h2>
+            <div>
+                <h3>Log</h3>
+                <div class="scrollable logging-table-container">
+                    <table class="logging-table">
+                        <tr>
+                            <td>1</td>
+                            <td><code id="log-0"></code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><code id="log-1"></code></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><code id="log-2"></code></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><code id="log-3"></code></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><code id="log-4"></code></td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><code id="log-5"></code></td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td><code id="log-6"></code></td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td><code id="log-7"></code></td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td><code id="log-8"></code></td>
+                        </tr>
+                        <tr>
+                            <td>10</td>
+                            <td><code id="log-9"></code></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Animation log</h3>
 
-    <!-- TODO: Yeah it's kind of an pain in the ass to log everything, so probably merge the two main tables 
-    together and remove some of the fileds that you haven't implemented yet. -->
+                <div class="scrollable logging-table-container">
+                    <table class="logging-table">
+                        <tr>
+                            <td>1</td>
+                            <td><code id="animation-log-0"></code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><code id="animation-log-1"></code></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><code id="animation-log-2"></code></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><code id="animation-log-3"></code></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><code id="animation-log-4"></code></td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><code id="animation-log-5"></code></td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td><code id="animation-log-6"></code></td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td><code id="animation-log-7"></code></td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td><code id="animation-log-8"></code></td>
+                        </tr>
+                        <tr>
+                            <td>10</td>
+                            <td><code id="animation-log-9"></code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
 
-    <h3>Technical</h3>
+            <table class="info-table">
+                <tr>
+                    <td>Client-Server connection</td>
+                    <td>
+                        <code id="client-connection">Uninitialized</code>
+                    </td>
+                </tr>
 
-    <table class="info-table">
-        <tr>
-            <td>Client-Server connection</td>
-            <td>
-                <code id="client-connection">Uninitialized</code>
-            </td>
-        </tr>
-        <tr>
-            <td>Camera response time</td>
-            <td>
-                <code id="camera-response-time">Uninitialized</code>
-            </td>
-        </tr>
-        
-        <!-- <tr>
-            <td>HEADER</td>
-            <td>
-                <code id="server-connection">Uninitialized</code>
-            </td>
-        </tr> -->
-    </table>
+                <tr>
+                    <td>Camera cycles per second</td>
+                    <td>
+                        <code id="camera-cycle">Uninitialized</code>
+                    </td>
+                </tr>
 
-    <h3>Log</h3>
-    <table id="logging-table">
-        <tr>
-            <td>1</td>
-            <td><code id="log-0"></code>
-            </td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td><code id="log-1"></code></td>
-        </tr>
-        <tr>
-            <td>3</td>
-            <td><code id="log-2"></code></td>
-        </tr>
-        <tr>
-            <td>4</td>
-            <td><code id="log-3"></code></td>
-        </tr>
-        <tr>
-            <td>5</td>
-            <td><code id="log-4"></code></td>
-        </tr>
-        <tr>
-            <td>6</td>
-            <td><code id="log-5"></code></td>
-        </tr>
-        <tr>
-            <td>7</td>
-            <td><code id="log-6"></code></td>
-        </tr>
-        <tr>
-            <td>8</td>
-            <td><code id="log-7"></code></td>
-        </tr>
-        <tr>
-            <td>9</td>
-            <td><code id="log-8"></code></td>
-        </tr>
-        <tr>
-            <td>10</td>
-            <td><code id="log-9"></code></td>
-        </tr>
-    </table>
+                <tr>
+                    <td>Servo cycles per second</td>
+                    <td>
+                        <code id="servo-cycle">Uninitialized</code>
+                    </td>
+                </tr>
 
-    <br>
-    <h3>Fun</h3>
-    
-    <table class="info-table">
-        <tr>
-            <td>Vision</td>
-            <td>
-                <img id="vision">
-            </td>
-        </tr>
-        <tr>
-            <td>"Target"</td>
-            <td>
-                <img id="target">
-            </td>
-        </tr>
-        <tr>
-            <td>Current Animation</td>
-            <td>
-                <code id="current-animation">Uninitialized</code>
-            </td>
-        </tr>
-    </table>
+                <tr>
+                    <td>Camera response time</td>
+                    <td>
+                        <code id="camera-response-time">Uninitialized</code>
+                    </td>
+                </tr>
 
-    <br>
-    <h2>Controls</h2>
+                <tr>
+                    <td>Animation status</td>
+                    <td>
+                        <code id="animation-status">Uninitialized</code>
+                    </td>
+                </tr>
 
-    <!-- Add the input to send custom positions to Bon-Bon -->
-    <!-- Add a way to input the animation that you want to start. (an inputbox?) -->
-    <button onclick="sendData('restart-animation', null)">Restart Animation</button>
-    <button onclick="sendData('toggle-loop', null)">Toggle loop</button>
-    <button onclick="sendData('start-animation', 'wave')">Wave</button>
-    <button onclick="sendData('start-animation', 'better-wave')">Better wave</button>
+                <tr>
+                    <td>Servos</td>
+                    <td>
+                        <div class="scrollable servos-container">
+                            <code id="current-raw-servos">
+                                Uninitialized
+                            </code>
+                        <div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Real Servos</td>
+                    <td>
+                        <div class="scrollable servos-container">
+                            <code id="current-servos">
+                                Uninitialized
+                            </code>
+                        <div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Vision</td>
+                    <td>
+                        <div id="vision-container">
+                            <img id="vision">
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>"Target"</td>
+                    <td>
+                        <div id="target-container">
+                            <img id="target">
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- <tr>
+                    <td>HEADER</td>
+                    <td>
+                        <code id="server-connection">Uninitialized</code>
+                    </td>
+                </tr> -->
+            </table>
+        </div>
+
+        <div>
+            <h2>Controls</h2>
+
+            <span><i>Hover over the buttons to read what they do</i></span>
+
+            <div>
+                <button type="button"
+                    onclick="sendData('set-vision', 'true')" 
+                    title="Starts parsing current vision">
+                        Vision ON
+                </button>
+                <button type="button"
+                    onclick="sendData('set-vision', 'false')" 
+                    title="Stops parsing current vision">
+                        Vision OFF
+                </button>
+                <button type="button"
+                    onclick="sendData('start-looking', null)" 
+                    title="Starts looking for the person. &NewLine; e.g. Starts parsing Vision and Starts the &quot;look-for&quot; animation.">
+                        Start looking
+                </button>
+            </div>
+            <div>
+                <button type="button"
+                    onclick="sendData('restart-animation', null)" 
+                    title="Transitions to the start of the current animation and starts replaying it">
+                        Restart Animation
+                </button>
+                <button type="button"
+                    onclick="sendData('set-looping', 'true')" 
+                    title="Starts looping the current animation. Animation will restart if the animation has stopped.">
+                        Looping ON
+                </button>
+                <button type="button"
+                    onclick="sendData('set-looping', 'false')" 
+                    title="Stops looping the current animation">
+                        Looping OFF
+                </button>
+            </div>
+
+            <form id="send-animation">
+                <input id="selected-animation-input" 
+                    type="text" 
+                    value="wave">
+                <button type="button"
+                    onclick="sendData('start-animation', document.getElementById('selected-animation-input').value)"
+                    title="Starts animation with the corresponding name that's defined in &quot;/server/res/animations.json&quot;">
+                        Start Animation
+                </button>
+            </form>
+
+            <form>
+                <!-- Cursed formatting -->
+                <textarea id="position-input" rows="5">{
+    "head1": 50,
+    "torso2": 50,
+    "eye3": 50
+}</textarea>
+
+                <button type="button"
+                    onclick="sendData('set-position', document.getElementById('position-input').value)"
+                    title="Transitions to the given position">
+                        Move to Position
+                </button>
+                <input type="reset" value="Reset"
+                    title="Reset the values in the above textarea">
+            </form>
+
+            <button type="button"
+                onclick="sendData('reload-options', null)"
+                title="Reloads variables from &quot;options.json&quot; in the server">
+                        Reload options.json
+            </button>
+        </div>
+    </div>
 </body>
 </html>

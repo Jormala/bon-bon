@@ -1,0 +1,144 @@
+* {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 2rem;
+}
+
+h3:first-of-type {
+    margin-top: 0px;
+}
+
+code {
+    font-size: 1.5rem;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+
+#container {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    border-collapse: collapse;
+
+    height: 100%;
+
+    &>* {
+        overflow-x: hidden;
+
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        border: black solid 1px;
+    }
+
+    &>*:last-child {
+        border-left: none;
+    }
+}
+
+
+/*
+         * Info
+         */
+.info-table {
+    border-collapse: collapse;
+    border: solid black 1px;
+    border-radius: 5px;
+
+    table-layout: fixed;
+
+    width: 100%;
+
+    /* WHAT THE FUCK IS A `tbody` ELEMENT DOING IN MY MOTHERF#@KING TABLES 
+            I SPEND AN HOUR ON THIS :DDDDD */
+    &>tbody>tr>td {
+        padding: 1rem;
+        border: solid black 1px;
+        border-radius: 5px;
+
+        &:first-child {
+            width: 40%;
+            background-color: antiquewhite;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        &:not(:first-child) {
+            overflow-x: hidden;
+
+            /* word-wrap: break-word; */
+            background-color: whitesmoke;
+        }
+    }
+}
+
+/* grrr */
+.scrollable {
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    word-break: break-all;
+}
+
+.servos-container {
+    /* "1.5rem" is approximately the height of one row */
+    height: calc(1.5rem * 3);
+
+    & code {
+        font-size: 1rem;
+    }
+}
+
+/* We can't know the height of the incomming image (without too much fuckery) */
+/* #vision-container & #target-container {
+            height: 480px;
+        } */
+
+.logging-table {
+
+    & tr td:first-of-type:after {
+        content: '.';
+    }
+
+    & code {
+        font-size: 1rem;
+    }
+}
+
+.logging-table-container {
+    padding: 0.25rem;
+    border: solid gray 2px;
+    height: 150px;
+}
+
+/* 
+         * Controls 
+         */
+#send-animation {
+    display: flex;
+    gap: 0.5rem;
+
+    &>*:first-child {
+        flex-grow: 1;
+    }
+
+    &>*:last-child {
+        flex-shrink: 0;
+    }
+}
+
+#position-input {
+    width: 100%;
+    resize: none;
+    margin-bottom: 8px;
+}
