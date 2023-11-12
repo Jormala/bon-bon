@@ -48,22 +48,17 @@ function realServoValue(value: ServoValue, servo: Servo) {
         return value;
     }
 
-    const CONSTRAINS = OPTIONS.get("SERVO_CONSTRAITS");
-    const limits = CONSTRAINS[servo];
+    const MAPS = OPTIONS.get("SERVO_MAPS");
+    const map = MAPS[servo];
+
+    if (!map) {
+        throw `Map for "${servo}" wasn't specified in Options!`
+    }
 
     // i'm scared
     value = constrain(value, 0, 100);
-    const min = constrain(limits.min, 0, 100);
-    const max = constrain(limits.max, 0, 100);
-
-    // Some warning checks that i don't want to do
-    // if (min !== limits.min) {
-    //     console.log(`WARNING: Had to constrain MIN of ${servo}`);
-    // }
-
-    // if (max !== limits.max) {
-    //     console.log(`WARNING: Had to constrain MAX of ${servo}`);
-    // }
+    const min = constrain(map.min, 0, 100);
+    const max = constrain(map.max, 0, 100);
 
     return mapFrom100(value, min, max);
 }
@@ -278,21 +273,6 @@ export class Animation {
         let lastPosition: Position | null = null;
         for (let rawFrame of framesJSON)
         {
-            // A pretty weird option
-            // Basically fills the position undefined (null) values with the vaules of the last position
-            // For example image the following positions:
-            // { head1:   10, torso2: 20,   eye3: 50   }
-            // { head1:    0, torso2: null, eye3: null }
-            // { head1: null, torso2: null, eye3: 30   }
-            //
-            // If filling was off, the above would crash as some values are clearly undefined.
-            // But with filling turned on, the above would be interpolated as:
-            // { head1:   10, torso2: 20,   eye3: 50   }
-            // { head1:    0, torso2: 20,   eye3: 50   }  // 'torso2' and 'eye3' use values from the last position
-            // { head1:    0, torso2: 20,   eye3: 30   }  // 'head1' and 'torso2' use last positions again, but 'eye3' gets a new value
-            // Note that if the first position has even a single null value this still 
-            //  crashes, as there's no previous value to get values from.
-
             const position = Position.fromJSON(rawFrame.position);
             if (useFilling && lastPosition) {
                 position.fillWith(lastPosition);

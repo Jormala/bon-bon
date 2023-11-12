@@ -9,6 +9,8 @@ import { OPTIONS } from './options'
 
 
 export class Raspberry {
+    private client: WebClient;
+
     private servoClient?: WebSocket;
     private _servos: Position | null = null;
     private connected: boolean = false;
@@ -18,21 +20,37 @@ export class Raspberry {
     private servoGetEndpoint?: string;
 
     private readonly RASPBERRY_PORT: number;
-    private readonly CAMERA_TIMEOUT: number;
 
-    private client: WebClient;
-
+    private imageWidth: number | null = null;
+    private imageHeight: number | null = null;
 
     public constructor(client: WebClient) {
         this.client = client;
 
         this.RASPBERRY_PORT = OPTIONS.get("RASPBERRY_PORT");
-        this.CAMERA_TIMEOUT = OPTIONS.get("CAMERA_TIMEOUT");
     }
+
+
+    public getImageWidth() {
+        return this.imageWidth;
+    }
+
+    public getImageHeight() {
+        return this.imageHeight;
+    }
+
+    public getServos(): Position {
+        return this._servos!;
+    }
+
+    public isConnected(): boolean {
+        return this.connected;
+    }
+
 
     public async connect() {
         if (!await this.getIPV4(this.RASPBERRY_PORT)) {
-            throw Error("Failde to get the Raspberry Pi's IPV4 address");
+            throw Error("Failed to find the Raspberry Pi's IPV4 address");
         }
 
         this.cameraEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/camera`;
@@ -64,6 +82,7 @@ export class Raspberry {
 
         servoClient.on('close', () => {
             this.connected = false;
+            this._servos = null;  // assume that everything sucks
 
             console.log("RASPBERRY: Lost connection");
 
@@ -99,7 +118,7 @@ export class Raspberry {
 
         let response;
         try {
-            response = await axios.get(this.cameraEndpoint, { timeout: this.CAMERA_TIMEOUT });
+            response = await axios.get(this.cameraEndpoint, { timeout: OPTIONS.get("CAMERA_TIMEOUT") });
         }
         catch (err) {
             this.client.sendInfo('camera-response-time', "TIMED OUT");
@@ -120,15 +139,30 @@ export class Raspberry {
             throw new Error("Bad status");
         }
 
-        return response.data as string;
+        const imageData: string = response.data;
+
+        if (!this.imageWidth || !this.imageHeight) {
+            await this.getImageDimensions(imageData);
+        }
+
+        return imageData;
     }
 
-    public getServos(): Position {
-        return this._servos!;
-    }
-
-    public isConnected(): boolean {
-        return this.connected;
+    private async getImageDimensions(base64Image: string): Promise<void> {
+        const dimensions: { width: number, height: number } = await new Promise((resolved) =>
+        {
+            var i = new Image()
+            i.onload = function () {
+                resolved({
+                    width: i.width,
+                    height: i.height,
+                });
+            };
+            i.src = base64Image;
+        });
+        
+        this.imageWidth = dimensions.width;
+        this.imageHeight = dimensions.height;
     }
 
     private async getInitialServoValues() {
@@ -155,7 +189,7 @@ export class Raspberry {
         const servoValues: any = {};
         Object.values(Servo).forEach((servo, index) => {
             // console.log(servo, data, index)
-            servoValues[servo as Servo] = data[index] as number;
+            servoValues[servo] = data[index] as number;
         });
 
         this._servos = new Position(servoValues);
@@ -167,7 +201,10 @@ export class Raspberry {
      * @param servoData Data send to the servos. **Needs to be formatted correctly.**
      */
     public setServos(position: Position) {
-        if (!this.servoEndpointOpen()) {
+        if (!this.servoEndpointOpen() || !this._servos) {
+            this.client.sendInfo('current-servos',  "Unavailable");
+            this.client.sendInfo('current-raw-servos', "Unavailable");
+
             return;
         }
 
@@ -177,8 +214,8 @@ export class Raspberry {
         position.fillWith(this._servos!);
         this._servos = position;
 
-        this.client.sendInfo('current-servos', position.toString())
-        this.client.sendInfo('current-raw-servos', position.toStringRaw())
+        this.client.sendInfo('current-servos', position.toString());
+        this.client.sendInfo('current-raw-servos', position.toStringRaw());
     }
 
     private servoEndpointOpen(): boolean {
@@ -242,7 +279,7 @@ export class Raspberry {
         }
 
         let tests = [];
-        for (let ip of ips) 
+        for (const ip of ips) 
         {
             const test: Test = {
                 promise: testHttp(ip, port).then(result => test.result = result),
@@ -253,9 +290,10 @@ export class Raspberry {
             tests.push(test);
         }
 
+        // Wait for all the tests to finish 
         await Promise.all(tests.map(test => test.promise));
 
-        const firstPassedTest = tests.filter(promise => promise.result)[0];
+        const firstPassedTest = tests.filter(test => test.result)[0];
         if (!firstPassedTest) {
             console.log("WARNING: Couldn't determine the Raspberry Pi IPV4.");
             return false;

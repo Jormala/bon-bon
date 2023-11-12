@@ -197,7 +197,7 @@ export class Animator {
         // this line can throw an error if the animation data was stupid and dumb
         const newAnimation: AnimationObject = {
             animation: Animation.fromJSON(foundAnimation.frames),
-            keepHeadStill: Boolean(foundAnimation.keepHeadStill)
+            keepHeadStill: Boolean(foundAnimation.headStill)
         };
 
         this.setAnimation(newAnimation);
@@ -260,9 +260,10 @@ export class Animator {
     private calculateHeadPosition(targetBoundingBox: BoundingBox): Position {
         // THE REALLY COMPLICATED SHIT
 
-        // TODO: REMEMBER TO CONFIGURE THESE THEN
-        const imageWidth: number = OPTIONS.get("IMAGE_WIDTH");
-        const imageHeight: number = OPTIONS.get("IMAGE_HEIGHT");
+        // Fetch the imageWidth and the imageHeight from the `rapsberry` object
+
+        // const imageWidth: number = OPTIONS.get("IMAGE_WIDTH");
+        // const imageHeight: number = OPTIONS.get("IMAGE_HEIGHT");
 
         // currently this will actually crash :D
         return new Position({} as any);
