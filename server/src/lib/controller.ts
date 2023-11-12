@@ -17,8 +17,9 @@ export class Controller {
 
     private RECEIVED_IMAGE_TYPE: string;
 
-    private looking = false;
-    private vision = false;
+    private gazing = false;   // If we are in the process of turning our head towards something
+    private looking = false;  // Are we looking for a human
+    private vision = false;   // Should we process vision
     private wantToSee: (() => boolean) = () => { return this.vision || this.looking };
 
 
@@ -34,7 +35,6 @@ export class Controller {
         this.client.setMessageHandler((type, data) => { this.handleInput(type, data) });
 
         this.animator.loadAnimation('wave');
-        // this.animator.loopAnimation = true;
     }
 
     /**
@@ -42,6 +42,15 @@ export class Controller {
      */
     public async servoRunner() {
         this.animator.animate();
+
+        // is this a hack?
+        // yes
+        if (this.gazing && this.animator.animationEnded()) {
+            this.gazing = false;
+
+            const randomAnimation = this.getRandomActAnimation();
+            this.animator.loadAnimation(randomAnimation);
+        }
     }
 
     /**
@@ -74,66 +83,76 @@ export class Controller {
             return;
         }
 
-        // TODO: Do things in the following order:
-        // 1. Disable looking
-        // 2. Look at person
-        // 3. Wait until the transition completes
-        // 4. Start some random act animation
-
-        // this.animator.lookAt(currentBoundingBox);
-        // this.looking = false;
-        
-        // const randomAnimation = this.getRandomActAnimation();
-        // this.animator.loadAnimation(randomAnimation);
+        this.animator.lookAt(currentBoundingBox);
+        this.looking = false;
+        this.gazing = true;
     }
     
     public handleInput(type: string, data: string) {
         try {
             switch (type) {
-                case 'start-animation':
+                case 'start-animation': {
                     this.animator.loadAnimation(data);
+
+                    this.looking = false;
+                    this.gazing = false;
 
                     this.client.sendInfo('log', `Started animation "${data}"`);
                     break;
+                }
 
-                case 'set-position':
+                case 'set-position': {
                     const parsedJSON = JSON.parse(data);
                     const position: Position = Position.fromJSON(parsedJSON);
 
                     this.animator.animateToPosition(position);
+
+                    this.looking = false;
+                    this.gazing = false;
                     break;
+                }
                 
-                case 'restart-animation':
+                case 'restart-animation': {
                     this.animator.animateToStart();
                     break;
+                }
 
-                case 'start-looking':
+                case 'start-looking': {
                     this.looking = true;
+                    this.gazing = false;
+
+                    const lookForAnimation: string = OPTIONS.get("look-for");
+                    this.animator.loadAnimation(lookForAnimation);
 
                     this.client.sendInfo('log', "Started looking");
                     break;
+                }
 
-                case 'set-vision':
+                case 'set-vision': {
                     this.vision = data === 'true';
 
                     this.client.sendInfo('log', `Set vision to "${this.vision}"`);
                     break;
+                }
 
-                case 'reload-options':
+                case 'reload-options': {
                     OPTIONS.load();
                     
                     this.client.sendInfo('log', "Reloaded options.json");
                     break;
+                }
 
-                case 'set-looping':
+                case 'set-looping': {
                     this.animator.loopAnimation = data === 'true';
 
                     this.client.sendInfo('log', `Set looping to "${this.animator.loopAnimation}"`);
                     break;
+                }
 
-                default:
+                default: {
                     this.client.sendInfo('log', `Invalid command type "${type}"`);
                     break;
+                }
             }
         }
         catch (err) {
@@ -144,7 +163,7 @@ export class Controller {
                 this.client.sendInfo('log', `Error processing input: ${err.message}`);
             }
             else {
-                // still not sure if this even can happen lol
+                // not sure if this even can happen lol
                 console.error(err);
                 this.client.sendInfo('log', "Fatal exception occurred!");
             }

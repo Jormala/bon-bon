@@ -1,5 +1,5 @@
 {
-    "RASPBERRY_IP": "localhost",
+    "RASPBERRY_IP": "192.168.1.132",
     "RASPBERRY_PORT": 1880,
     "RECEIVED_IMAGE_TYPE": "jpg",
     "CAMERA_TIMEOUT": 10000,
@@ -8,7 +8,7 @@
     "IMAGE_HEIGHT": 480,
     "USE_FILLING": true,
     "SLEEP": 50,
-    "LOOK_FOR_ANIMATION": 10,
+    "LOOK_FOR_ANIMATION": "look-for",
     "ACT_ANIMATIONS": [
         "wave"
     ],
