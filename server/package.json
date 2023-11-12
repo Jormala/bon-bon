@@ -4,7 +4,9 @@
   "description": "Project files for the IoT project.",
   "main": "build/server.js",
   "scripts": {
-    "build": "npx tsc && node build/server.js"
+    "start": "node build/server.js",
+    "postinstall": "npx tsc",
+    "build": "npm run build && npm start"
   },
   "author": "",
   "license": "ISC",
