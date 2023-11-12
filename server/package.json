@@ -5,8 +5,9 @@
   "main": "build/server.js",
   "scripts": {
     "start": "node build/server.js",
-    "postinstall": "npx tsc",
-    "build": "npm run build && npm start"
+    "build": "npx tsc",
+    "build-start": "npm run build && npm start",
+    "postinstall": "npm run build"
   },
   "author": "",
   "license": "ISC",
