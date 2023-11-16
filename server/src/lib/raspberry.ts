@@ -82,7 +82,7 @@ export class Raspberry {
 
         servoClient.on('close', () => {
             this.connected = false;
-            this._servos = null;  // assume that everything sucks
+            // this._servos = null;  // assume that everything sucks
 
             console.log("RASPBERRY: Lost connection");
 

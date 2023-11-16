@@ -33,8 +33,6 @@ export class Controller {
         this.RECEIVED_IMAGE_TYPE = OPTIONS.get("RECEIVED_IMAGE_TYPE");
 
         this.client.setMessageHandler((type, data) => { this.handleInput(type, data) });
-
-        this.animator.loadAnimation('wave');
     }
 
     /**

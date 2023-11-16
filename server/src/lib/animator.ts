@@ -139,7 +139,7 @@ export class Animator {
      * @param position The position to transition to
      * @param duration How long the transition takes
      */
-    public animateToPosition(position: Position, duration = 1000) {
+    public animateToPosition(position: Position, duration = 0) {
         this.currentAnimation = null;
         this.transitionAnimation = {
             animation: this.animationToPosition(position, duration),

@@ -1,5 +1,5 @@
 {
-    "RASPBERRY_IP": "192.168.1.132",
+    "RASPBERRY_IP": "192.168.92.38",
     "RASPBERRY_PORT": 1880,
     "RECEIVED_IMAGE_TYPE": "jpg",
     "CAMERA_TIMEOUT": 10000,
@@ -11,13 +11,13 @@
         "wave"
     ],
     "SERVO_MAPS": {
-        "head1": {
-            "min": 10,
-            "max": 90
+        "eye_x": {
+            "min": 35,
+            "max": 85
         },
-        "torso2": {
-            "min": 0,
-            "max": 100
+        "eye_y": {
+            "min": 40,
+            "max": 70
         },
         "eye3": {
             "min": 25,

@@ -5,9 +5,8 @@ import { OPTIONS } from "./options";
 // don't change the order of this enum. it contains the format in which the data is send to the raspberry
 // /\/\/\ autistic /\/\/\
 export enum Servo {
-    Head1 = 'head1',
-    Torso2 = 'torso2',
-    Eye3 = 'eye3'
+    EyeX = 'eye_x',
+    EyeY = 'eye_y'
 }
 
 /**
@@ -29,7 +28,7 @@ type Servos =  { [key in Servo]: ServoValue };
 /**
  * Servos that are required for head movement.
  */
-export const HEAD_SERVOS: Servo[] = [ Servo.Head1, Servo.Eye3 ];
+export const HEAD_SERVOS: Servo[] = [ Servo.EyeX, Servo.EyeY ];
 
 
 function map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {

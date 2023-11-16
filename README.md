@@ -197,3 +197,32 @@ Once you have it, set the `RASPBERRY_IP` value in `server/options.json` to IP yo
 ![](https://github.com/Jormala/bon-bon/assets/82582260/d5e6e397-b91e-43ef-b990-560abf31cdeb)
 
 TODO -->
+
+
+
+
+
+
+
+
+
+
+
+
+# Servos
+
+- 10 servos for hands
+  - 5 per hand
+  - shoulder x and y
+  - elbow
+  - hand x y
+  - (for each name "HandL" and "HandR")
+
+- eyes 2
+- neck 2
+  - neck-x, neck-y
+- chin 1
+  - jaw
+- 0 for ears
+
+- neck 1 and 2 eyes are (neck-y, eye-x, eye-y)
