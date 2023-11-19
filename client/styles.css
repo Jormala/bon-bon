@@ -92,7 +92,7 @@ img {
 
 .servos-container {
     /* "1.5rem" is approximately the height of one row */
-    height: calc(1.5rem * 3);
+    height: calc(1.5rem * 14);
 
     & code {
         font-size: 1rem;
@@ -139,6 +139,7 @@ img {
 
 #position-input {
     width: 100%;
+
     resize: none;
     margin-bottom: 8px;
 }

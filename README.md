@@ -118,6 +118,7 @@ Interesting options that can be changed in `server/res/options.json`. You can ch
 | `MIN_SCORE` | Number between `0` and `1` | How confident must be to label a person in a captured image. `0 = Less confident` and `1 = More confident` |
 | `USE_FILLING` | `true` or `false` | Whether to use [filling](#use_filling--option) when reading animations from `animations.json`. |
 | `SLEEP` | Number of milliseconds | Basically how fast the code runs. **Must be greater than `1`** |
+| `TRANSITION_SPEED` | Number of milliseconds |  |
 | `LOOK_FOR_ANIMATION` | Animation name | The name of the animation that's played when looking for a person. |
 | `ACT_ANIMATIONS` | List of animation names | A list of animations from which an animation is chosen to be played when Bon-bon has finished looking towards a person. |
 | `SERVO_MAPS` | ***a really simple object :DD*** | The ranges where the specified servos values are actually mapped to. *Don't touch these values \:)* |
@@ -209,7 +210,7 @@ TODO -->
 
 
 
-# Servos
+<!-- # Servos
 
 - 10 servos for hands
   - 5 per hand
@@ -226,3 +227,19 @@ TODO -->
 - 0 for ears
 
 - neck 1 and 2 eyes are (neck-y, eye-x, eye-y)
+
+l-shoulder-x
+l-shoulder-y
+l-elbow
+l-hand-x
+l-hand-y
+r-shoulder-x
+r-shoulder-y
+r-elbow
+r-hand-x
+r-hand-y
+eye-x
+eye-y
+neck-x 
+neck-y
+jaw -->

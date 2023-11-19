@@ -139,7 +139,7 @@ export class Animator {
      * @param position The position to transition to
      * @param duration How long the transition takes
      */
-    public animateToPosition(position: Position, duration = 0) {
+    public animateToPosition(position: Position, duration?: number) {
         this.currentAnimation = null;
         this.transitionAnimation = {
             animation: this.animationToPosition(position, duration),
@@ -221,9 +221,10 @@ export class Animator {
         this.animateToStart();
     }
 
-    private animationToPosition(position: Position, duration = 1000): Animation {
+    private animationToPosition(position: Position, duration?: number): Animation {
+        duration = duration ?? OPTIONS.get('TRANSITION_SPEED');
+
         // IF we don't know the current position, we "jump" to the given position...
-        // this is fucking dumb and dangerous
         const currentPosition = this.raspberry.getServos() ?? position;
         if (currentPosition.equals(position)) {
             // If we jump straight away, why wait?
@@ -249,7 +250,7 @@ export class Animator {
                     position,  // position
                     0,  // startTime
                     0,  // still
-                    duration   // speed
+                    duration!  // speed
                 )
             ]
         );

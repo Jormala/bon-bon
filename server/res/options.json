@@ -1,27 +1,93 @@
 {
-    "RASPBERRY_IP": "192.168.92.38",
+    "RASPBERRY_IP": "192.168.1.132",
     "RASPBERRY_PORT": 1880,
     "RECEIVED_IMAGE_TYPE": "jpg",
     "CAMERA_TIMEOUT": 10000,
     "MIN_SCORE": 0.5,
     "USE_FILLING": true,
     "SLEEP": 50,
+    "TRANSITION_SPEED": 1000,
     "LOOK_FOR_ANIMATION": "look-for",
     "ACT_ANIMATIONS": [
         "wave"
     ],
+    "DEFAULT_POSITION": {
+        "l-shoulder-x": 50,
+        "l-shoulder-y": 50,
+        "l-elbow": 50,
+        "l-hand-x": 50,
+        "l-hand-y": 50,
+        "r-shoulder-x": 50,
+        "r-shoulder-y": 50,
+        "r-elbow": 50,
+        "r-hand-x": 50,
+        "r-hand-y": 50,
+        "eye-x": 50,
+        "eye-y": 50,
+        "neck-x": 50,
+        "neck-y": 50,
+        "jaw": 50
+    },
     "SERVO_MAPS": {
-        "eye_x": {
+        "l-shoulder-x": {
+            "min": 0,
+            "max": 100
+        },
+        "l-shoulder-y": {
+            "min": 0,
+            "max": 100
+        },
+        "l-elbow": {
+            "min": 0,
+            "max": 100
+        },
+        "l-hand-x": {
+            "min": 0,
+            "max": 100
+        },
+        "l-hand-y": {
+            "min": 0,
+            "max": 100
+        },
+        "r-shoulder-x": {
+            "min": 0,
+            "max": 100
+        },
+        "r-shoulder-y": {
+            "min": 0,
+            "max": 100
+        },
+        "r-elbow": {
+            "min": 0,
+            "max": 100
+        },
+        "r-hand-x": {
+            "min": 0,
+            "max": 100
+        },
+        "r-hand-y": {
+            "min": 0,
+            "max": 100
+        },
+        "eye-x": {
             "min": 35,
             "max": 85
         },
-        "eye_y": {
+        "eye-y": {
             "min": 40,
             "max": 70
         },
-        "eye3": {
-            "min": 25,
-            "max": 75
+        "neck-x": {
+            "min": 0,
+            "max": 100
+        },
+        "neck-y": {
+            "min": 0,
+            "max": 100
+        },
+        "jaw": {
+            "min": 0,
+            "max": 100
         }
     }
 }

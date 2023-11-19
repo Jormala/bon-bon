@@ -1,12 +1,22 @@
 import { OPTIONS } from "./options";
 
 
-// TODO: Name and implement these
-// don't change the order of this enum. it contains the format in which the data is send to the raspberry
-// /\/\/\ autistic /\/\/\
 export enum Servo {
-    EyeX = 'eye_x',
-    EyeY = 'eye_y'
+    LShoulderX = 'l-shoulder-x',
+    LShoulderY = 'l-shoulder-y',
+    LElbow     = 'l-elbow',
+    lHandX     = 'l-hand-x',
+    LHandY     = 'l-hand-y',
+    RShoulderX = 'r-shoulder-x',
+    RShoulderY = 'r-shoulder-y',
+    RElbow     = 'r-elbow',
+    RHandX     = 'r-hand-x',
+    RHandY     = 'r-hand-y',
+    EyeX       = 'eye-x',
+    EyeY       = 'eye-y',
+    NeckX      = 'neck-x',
+    NeckY      = 'neck-y',
+    Jaw        = 'jaw'
 }
 
 /**
@@ -28,7 +38,7 @@ type Servos =  { [key in Servo]: ServoValue };
 /**
  * Servos that are required for head movement.
  */
-export const HEAD_SERVOS: Servo[] = [ Servo.EyeX, Servo.EyeY ];
+export const HEAD_SERVOS: Servo[] = [ Servo.EyeX, Servo.EyeY, Servo.NeckY ];
 
 
 function map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -69,7 +79,7 @@ export class Position {
     private readonly servos: Servos;
     private readonly raw_servos: Servos;
 
-    public constructor(servos: Servos) {
+    public constructor(servos: Servos, mapped = false) {
         this.raw_servos = servos;
         this.servos = structuredClone(servos);  // holy hell
 
@@ -79,6 +89,10 @@ export class Position {
             // All servos MUST be specified for each position
             if (!keys.includes(servo)) {
                 throw Error(`Servo "${servo}" wasn't specified`);
+            }
+
+            if (mapped) {
+                continue;
             }
 
             let value: ServoValue = this.servos[servo];
@@ -95,7 +109,7 @@ export class Position {
             servos[servo] = servosJSON[servo] ?? null;
         }
 
-        return new Position(servosJSON);
+        return new Position(servos);
     }
 
     public allServosSpecified(): boolean {
@@ -117,6 +131,10 @@ export class Position {
         return true;
     }
 
+    public getServo(servo: Servo): ServoValue {
+        return this.servos[servo];
+    }
+
     public setServo(servo: Servo, value: ServoValue) {
         this.raw_servos[servo] = value;
         this.servos[servo] = realServoValue(value, servo);
@@ -128,6 +146,8 @@ export class Position {
         const returnServos: any = {};
         for (let servo of Object.values(Servo)) 
         {
+            // it's crucial that we interpolate using the raw_servos, as when we construct the new 
+            //  interpolated position, we'll have to map the new values to the defined ranges
             const servo1 = pos1.servos[servo];
             const servo2 = pos2.servos[servo];
 
@@ -141,7 +161,7 @@ export class Position {
             returnServos[servo] = interpolatedValue;
         }
 
-        return new Position(returnServos);
+        return new Position(returnServos, true);
     }
 
     public toString(): string {
@@ -188,7 +208,7 @@ export class Position {
         for (const servo of Object.values(Servo)) 
         {
             const originalValue = this.servos[servo];
-            const fillValue = position.servos[servo];  // ??? why can I access a PRIVATE method here??
+            const fillValue = position.servos[servo];  // ??? why can I access a PRIVATE property here??
 
             if (originalValue === null && fillValue !== null) {
                 this.servos[servo] = fillValue;

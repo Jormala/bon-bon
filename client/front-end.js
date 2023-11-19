@@ -1,4 +1,20 @@
-const SERVO_ORDER = ["head1", "torso2", "eye3"];
+const SERVO_ORDER = [
+    "l-shoulder-x",
+    "l-shoulder-y",
+    "l-elbow",
+    "l-hand-x",
+    "l-hand-y",
+    "r-shoulder-x",
+    "r-shoulder-y",
+    "r-elbow",
+    "r-hand-x",
+    "r-hand-y",
+    "eye-x",
+    "eye-y",
+    "neck-x" ,
+    "neck-y",
+    "jaw"
+]
 
 let socket;
 

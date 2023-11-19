@@ -82,7 +82,6 @@ export class Raspberry {
 
         servoClient.on('close', () => {
             this.connected = false;
-            // this._servos = null;  // assume that everything sucks
 
             console.log("RASPBERRY: Lost connection");
 
@@ -149,6 +148,7 @@ export class Raspberry {
     }
 
     private async getImageDimensions(base64Image: string): Promise<void> {
+        // fucking kill me 
         const dimensions: { width: number, height: number } = await new Promise((resolved) =>
         {
             var i = new Image()
@@ -188,11 +188,17 @@ export class Raspberry {
 
         const servoValues: any = {};
         Object.values(Servo).forEach((servo, index) => {
-            // console.log(servo, data, index)
             servoValues[servo] = data[index] as number;
         });
 
-        this._servos = new Position(servoValues);
+        // Fill the servo values with the default position
+        const defaultServos = Position.fromJSON(OPTIONS.get("DEFAULT_POSITION"));
+        const newServos = new Position(servoValues);
+        newServos.fillWith(defaultServos);
+
+        console.log(`RASPBERRY: Queried servos "${newServos.toString()}"`);
+
+        this._servos = newServos;
     }
 
     /**
@@ -223,8 +229,7 @@ export class Raspberry {
     }
 
     /**
-     * Attempts to find the Raspberry Pi on the network. \
-     * *Currently requires options to be present in the `res` folder*
+     * Attempts to find the Raspberry Pi on the network.
      * 
      * @param port - The Port where node-red is hosted on the Raspberry Pi.
      * @returns Whether succesful in locating the Raspberry Pi on the network.

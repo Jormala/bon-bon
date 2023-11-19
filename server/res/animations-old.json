@@ -1,0 +1,76 @@
+[
+    {
+        "name": "wave",
+        "headStill": false,
+        "frames": [
+            {
+                "speed": 0,
+                "still": 200,
+                "position": {
+                    "head1": 90,
+                    "torso2": 10,
+                    "eye3": 10
+                }
+            },
+            {
+                "speed": 500,
+                "still": 1000,
+                "position": {
+                    "head1": 50,
+                    "torso2": 50,
+                    "eye3": 90
+                }
+            },
+            {
+                "speed": 1000,
+                "still": 1000,
+                "position": {
+                    "head1": 40,
+                    "torso2": 70,
+                    "eye3": 10
+                }
+            }
+        ]
+    },
+    {
+        "name": "better-wave",
+        "frames": [
+            {
+                "speed": 0,
+                "still": 200,
+                "position": {
+                    "head1": 10,
+                    "torso2": 10,
+                    "eye3": 10
+                }
+            },
+            {
+                "speed": 1000,
+                "still": 1000,
+                "position": {
+                    "head1": 20,
+                    "torso2": 50,
+                    "eye3": 90
+                }
+            },
+            {
+                "speed": 1000,
+                "still": 0,
+                "position": {
+                    "head1": 100,
+                    "torso2": 70,
+                    "eye3": 10
+                }
+            },
+            {
+                "speed": 10,
+                "still": 1000,
+                "position": {
+                    "head1": 0,
+                    "torso2": 65,
+                    "eye3": 10
+                }
+            }
+        ]
+    }
+]

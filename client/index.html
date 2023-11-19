@@ -233,6 +233,11 @@
                 </button>
             </div>
 
+            <div style="width: fit-content">
+                Transition Speed: 
+                <input onchange="(value) => sendData('set-transitionspeed', value)" type="submit">
+            </div>
+
             <form id="send-animation">
                 <input id="selected-animation-input" 
                     type="text" 
@@ -246,10 +251,22 @@
 
             <form>
                 <!-- Cursed formatting -->
-                <textarea id="position-input" rows="5">{
-    "head1": 50,
-    "torso2": 50,
-    "eye3": 50
+                <textarea id="position-input" rows="17">{
+    "l-shoulder-x": 50,
+    "l-shoulder-y": 50,
+    "l-elbow": 50,
+    "l-hand-x": 50,
+    "l-hand-y": 50,
+    "r-shoulder-x": 50,
+    "r-shoulder-y": 50,
+    "r-elbow": 50,
+    "r-hand-x": 50,
+    "r-hand-y": 50,
+    "eye-x": 50,
+    "eye-y": 50,
+    "neck-x": 50,
+    "neck-y": 50,
+    "jaw": 50
 }</textarea>
 
                 <button type="button"
