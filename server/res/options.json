@@ -38,12 +38,12 @@
             "max": 100
         },
         "l-elbow": {
-            "min": 0,
-            "max": 100
+            "min": 50,
+            "max": 72
         },
         "l-hand-x": {
-            "min": 0,
-            "max": 100
+            "min": 50,
+            "max": 72
         },
         "l-hand-y": {
             "min": 0,
@@ -58,12 +58,12 @@
             "max": 100
         },
         "r-elbow": {
-            "min": 0,
-            "max": 100
+            "min": 66,
+            "max": 86
         },
         "r-hand-x": {
-            "min": 0,
-            "max": 100
+            "min": 39,
+            "max": 61
         },
         "r-hand-y": {
             "min": 0,
@@ -82,12 +82,12 @@
             "max": 100
         },
         "neck-y": {
-            "min": 0,
-            "max": 100
+            "min": 11,
+            "max": 33
         },
         "jaw": {
-            "min": 0,
-            "max": 100
+            "min": 55,
+            "max": 61
         }
     }
 }
