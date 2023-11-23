@@ -233,9 +233,12 @@
                 </button>
             </div>
 
-            <div style="width: fit-content">
-                Transition Speed: 
-                <input onchange="(value) => sendData('set-transitionspeed', value)" type="submit">
+            <div id="transition-speed">
+                <span>Transition Speed:&nbsp;&nbsp;</span>
+                <input type="number"
+                    onchange="value > 0 ? sendData('set-transition-speed', value) : null" 
+                    min="1" 
+                    value="1000">
             </div>
 
             <form id="send-animation">

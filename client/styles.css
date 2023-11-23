@@ -30,7 +30,7 @@ img {
 
     height: 100%;
 
-    &>* {
+    & > * {
         overflow-x: hidden;
 
         padding: 1rem;
@@ -41,7 +41,7 @@ img {
         border: black solid 1px;
     }
 
-    &>*:last-child {
+    & > *:last-child {
         border-left: none;
     }
 }
@@ -61,7 +61,7 @@ img {
 
     /* WHAT THE FUCK IS A `tbody` ELEMENT DOING IN MY MOTHERF#@KING TABLES 
             I SPEND AN HOUR ON THIS :DDDDD */
-    &>tbody>tr>td {
+    & > tbody > tr > td {
         padding: 1rem;
         border: solid black 1px;
         border-radius: 5px;
@@ -121,18 +121,15 @@ img {
     height: 150px;
 }
 
-/* 
-         * Controls 
-         */
 #send-animation {
     display: flex;
     gap: 0.5rem;
 
-    &>*:first-child {
+    & > *:first-child {
         flex-grow: 1;
     }
 
-    &>*:last-child {
+    & > *:last-child {
         flex-shrink: 0;
     }
 }
@@ -142,4 +139,16 @@ img {
 
     resize: none;
     margin-bottom: 8px;
+}
+
+#transition-speed {
+    display: flex;
+
+    & > span {
+        text-wrap: nowrap;
+    }
+
+    & > input {
+        flex: 1;
+    }
 }
