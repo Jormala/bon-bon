@@ -33,7 +33,7 @@ type ServoValue = number | null;  // "null" means "do nothing" or "keep the last
 //  if i give the type `{ [key in Servo]: ServoValue }` then wouldn't you think that 
 //  it means the KEYS from `Servo` are, you know, KEYS?
 // like motherfucker what do you think [key in Servo] means? THE VALUE :DDDD
-type Servos =  { [key in Servo]: ServoValue };
+export type Servos =  { [key in Servo]: ServoValue };
 
 /**
  * Servos that are required for head movement.
@@ -144,12 +144,12 @@ export class Position {
         p = constrain(p, 0, 1);  // i'm scared
 
         const returnServos: any = {};
-        for (let servo of Object.values(Servo)) 
+        for (const servo of Object.values(Servo)) 
         {
             // it's crucial that we interpolate using the raw_servos, as when we construct the new 
             //  interpolated position, we'll have to map the new values to the defined ranges
-            const servo1 = pos1.servos[servo];
-            const servo2 = pos2.servos[servo];
+            const servo1 = pos1.raw_servos[servo];
+            const servo2 = pos2.raw_servos[servo];
 
             if (servo1 === null || servo2 === null) {
                 throw Error("Cannot interpolate between 'null' values!");
@@ -162,6 +162,23 @@ export class Position {
         }
 
         return new Position(returnServos, true);
+    }
+
+    /**
+     * Constructs a position where all values are `null`. Use with caution.
+     * 
+     * @returns A @see {@link Position} with all servos set to `null`
+     */
+    public static nullPosition(): Position {
+        const servos: Servos = {} as Servos;
+
+        // there has to be a beautiful one liner for this :p
+        for (const servo of Object.values(Servo)) 
+        {
+            servos[servo] = null;
+        }
+
+        return new Position(servos, true);  // no need to map null values
     }
 
     public toString(): string {
@@ -315,7 +332,9 @@ export class Animation {
     public resetAnimation() {
         this.currentTime = 0;
         this._animationEnded = false;
-        this.previousTime = undefined;
+
+        // this ensures that the animation doesn't start playing until `animate` is called the first time
+        this.previousTime = undefined;  
     }
 
     public animationEnded(): boolean {
@@ -333,6 +352,8 @@ export class Animation {
         // one possible way of preventhing this is to start then setting previousTime
         // to Date.now() continuously until connection is re-established
         //  (or once before we start sending shit back to the raspberry)
+        // /\/\ old comment. Currently I'm not even sure this can happen... and even if it can
+        //  the shit method below actually does it's job pretty well. 
         let delta: number = Date.now() - this.previousTime!;
 
         // a loose(shit) safety measure to keep Bon-Bon from "jumping" between frames.
@@ -340,6 +361,10 @@ export class Animation {
 
         this.currentTime! += delta;
         if (this.runTime <= this.currentTime!) {
+            // A cool idea would be to launch a callback here, so we don't have to check
+            //  whether the has been ended manually.
+            // But I don't want to implement it this deep into the project. Would mean a lot of
+            //  refactoring.
             this._animationEnded = true;
         }
 
@@ -383,4 +408,3 @@ export class Animation {
         return position;
     }
 }
-

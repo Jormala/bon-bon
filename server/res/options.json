@@ -6,7 +6,6 @@
     "MIN_SCORE": 0.5,
     "USE_FILLING": true,
     "SLEEP": 50,
-    "TRANSITION_SPEED": 1000,
     "LOOK_FOR_ANIMATION": "look-for",
     "ACT_ANIMATIONS": [
         "wave"

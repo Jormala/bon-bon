@@ -2,7 +2,7 @@ import fs from 'fs';
 
 import { WebClient } from './webclient';
 import { Raspberry } from './raspberry';
-import { Animation, Frame, Position, HEAD_SERVOS } from './animation';
+import { Animation, Frame, Position, HEAD_SERVOS, Servo, Servos } from './animation';
 
 import { OPTIONS } from './options';
 
@@ -30,6 +30,8 @@ export class Animator {
     private currentAnimation: AnimationObject | null = null;
     // A "temporary" animation that's used to transition between frames
     private transitionAnimation: AnimationObject | null = null;
+
+    private _transitionSpeed: number = 1000;
 
     private static readonly ANIMATIONS_PATH: string = "res/animations.json";
 
@@ -61,6 +63,18 @@ export class Animator {
         if (this._loopAnimation && this.animationEnded()) {
             this.currentAnimation?.animation.resetAnimation();
         }
+    }
+
+    public set transitionSpeed(value: number) {
+        if (isNaN(value)) {
+            throw Error("Can't set NaN to be the transition speed!");
+        }
+
+        this._transitionSpeed = value;
+    }
+
+    public get transitionSpeed(): number {
+        return this._transitionSpeed;
     }
 
     /**
@@ -152,7 +166,6 @@ export class Animator {
     public lookAt(boundingBox: BoundingBox) {
         const finalPosition = this.calculateHeadPosition(boundingBox);
 
-        // Not a complex animation that we would want to loop, so we only "transition" here
         this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
     }
 
@@ -222,7 +235,7 @@ export class Animator {
     }
 
     private animationToPosition(position: Position, duration?: number): Animation {
-        duration = duration ?? OPTIONS.get('TRANSITION_SPEED');
+        duration = duration ?? this._transitionSpeed;
 
         // IF we don't know the current position, we "jump" to the given position...
         const currentPosition = this.raspberry.getServos() ?? position;
@@ -258,15 +271,52 @@ export class Animator {
         return animation;
     }
 
+    /**
+     * Returns a estimate position for the servos, where we would be looking at the person
+     * 
+     * @param targetBoundingBox Bounding Box of the object.
+     * @returns 
+     */
+    private estimateHeadPosition(targetBoundingBox: BoundingBox) {
+        const headPosition = Position.nullPosition();
+
+        const width = this.raspberry.getImageWidth();
+        const height = this.raspberry.getImageHeight();
+
+        if (width === null || height === null) {
+            // return a null position
+            return headPosition;
+        }
+
+        const centerX: number = this.raspberry.getImageWidth() / 2;
+        const centerY: number = this.raspberry.getImageHeight() / 2;
+
+        const targetX: number = targetBoundingBox[0] + targetBoundingBox[2] / 2;
+        const targetY: number = targetBoundingBox[1] + targetBoundingBox[3] / 2;
+
+        const currentEyeX: number = currentPosition.getServo(Servo.EyeX)!;
+        const currentEyeY: number = currentPosition.getServo(Servo.EyeY)!;
+        const currentNeckY: number = currentPosition.getServo(Servo.NeckY)!;
+
+        const newEyeX = currentEyeX;
+        const newEyeY = currentEyeY;
+        const newNeckY = currentNeckY;
+        
+        headPosition.setServo(Servo.EyeX, newEyeX);
+        headPosition.setServo(Servo.EyeY, newEyeY);
+        headPosition.setServo(Servo.NeckY, newNeckY);
+
+        return headPosition;
+    }
+
     private calculateHeadPosition(targetBoundingBox: BoundingBox): Position {
-        // THE REALLY COMPLICATED SHIT
+        // this method would have been used to calculate the exact head position.
+        // BUT ITS A FUCKING PAIN IN THE ASS THE MATH SUCK BECAUSE OF NECK-Y!!!
 
-        // Fetch the imageWidth and the imageHeight from the `rapsberry` object
+        // maybe in the future?
 
-        // const imageWidth: number = OPTIONS.get("IMAGE_WIDTH");
-        // const imageHeight: number = OPTIONS.get("IMAGE_HEIGHT");
+        // Fetch the imageWidth and the imageHeight from the `raspberry` object
 
-        // currently this will actually crash :D
-        return new Position({} as any);
+        throw Error("Not implemented");
     }
 }

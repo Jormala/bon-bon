@@ -117,7 +117,7 @@ export class Raspberry {
 
         let response;
         try {
-            response = await axios.get(this.cameraEndpoint, { timeout: OPTIONS.get("CAMERA_TIMEOUT") });
+            response = await axios.get(this.cameraEndpoint, { timeout: OPTIONS.get("CAMERA_TIMEOUT"), validateStatus: () => true });
         }
         catch (err) {
             this.client.sendInfo('camera-response-time', "TIMED OUT");
@@ -131,11 +131,12 @@ export class Raspberry {
         console.log(`RASPBERRY: Camera query took ${responseTime}ms`)
         this.client.sendInfo('camera-response-time', `${responseTime}ms`);
 
-        if (response.status != 200) {
-            // This shouldn't EVER happen. 
-            console.log("mitä vittua");
-            console.log(response);
-            throw new Error("Bad status");
+        console.log(response.status);
+
+        if (response.status !== 200) {
+            this.client.sendInfo('log', "Camera error on the Raspberry");
+
+            throw Error("Camera error on the Raspberry");
         }
 
         const imageData: string = response.data;
@@ -193,10 +194,11 @@ export class Raspberry {
 
         // Fill the servo values with the default position
         const defaultServos = Position.fromJSON(OPTIONS.get("DEFAULT_POSITION"));
+        console.log(defaultServos);
         const newServos = new Position(servoValues);
         newServos.fillWith(defaultServos);
 
-        console.log(`RASPBERRY: Queried servos "${newServos.toString()}"`);
+        console.log(`RASPBERRY: Queried servos: ${newServos.toString()}`);
 
         this._servos = newServos;
     }

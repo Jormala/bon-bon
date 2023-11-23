@@ -1,5 +1,3 @@
-import { AxiosError } from 'axios';
-
 import { Position } from './animation';  
 import { WebClient } from './webclient'
 import { Recognition } from './recognition';
@@ -49,6 +47,8 @@ export class Controller {
             const randomAnimation = this.getRandomActAnimation();
             this.animator.loadAnimation(randomAnimation);
         }
+
+        // TODO: Implement the calibration process here and to animator.
     }
 
     /**
@@ -65,8 +65,8 @@ export class Controller {
             rawImageData = await this.raspberry.getCamera();
         }
         catch (err) {
-            if (err instanceof AxiosError) {
-                console.log("RASPBERRY: Camera timed out!");
+            if (err instanceof Error) {
+                console.log(err.message);
                 return;
             }
 
@@ -144,6 +144,19 @@ export class Controller {
                     this.animator.loopAnimation = data === 'true';
 
                     this.client.sendInfo('log', `Set looping to "${this.animator.loopAnimation}"`);
+                    break;
+                }
+
+                case 'set-transition-speed': {
+                    const transitionSpeed: number = Number(data);
+                    try {
+                        this.animator.transitionSpeed = transitionSpeed;
+                    }
+                    catch {
+                        throw Error(`Couldn't covert "${data}" to a number`);
+                    }
+
+                    this.client.sendInfo('log', `Set transition speed to: ${this.animator.transitionSpeed}`)
                     break;
                 }
 
