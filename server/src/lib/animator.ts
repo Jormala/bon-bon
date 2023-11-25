@@ -164,9 +164,9 @@ export class Animator {
     }
 
     public lookAt(boundingBox: BoundingBox) {
-        const finalPosition = this.calculateHeadPosition(boundingBox);
+        const finalPosition = this.estimateHeadPosition(boundingBox);
 
-        this.animateToPosition(finalPosition, OPTIONS.get("LOOK_SPEED"));
+        this.animateToPosition(finalPosition);
     }
 
     /**
@@ -278,35 +278,39 @@ export class Animator {
      * @returns 
      */
     private estimateHeadPosition(targetBoundingBox: BoundingBox) {
-        // const headPosition = Position.nullPosition();
+        const headPosition = Position.nullPosition();
 
-        // const width = this.raspberry.getImageWidth();
-        // const height = this.raspberry.getImageHeight();
+        const width: number = this.raspberry.getImageWidth() ?? 320;
+        const height: number = this.raspberry.getImageHeight() ?? 240;
 
-        // if (width === null || height === null) {
-        //     // return a null position
-        //     return headPosition;
-        // }
+        if (width === null || height === null || !targetBoundingBox) {
+            // return a null position
+            return headPosition;
+        }
 
-        // const centerX: number = this.raspberry.getImageWidth() / 2;
-        // const centerY: number = this.raspberry.getImageHeight() / 2;
+        const centerX: number = width / 2;
+        const centerY: number = height / 2;
 
-        // const targetX: number = targetBoundingBox[0] + targetBoundingBox[2] / 2;
-        // const targetY: number = targetBoundingBox[1] + targetBoundingBox[3] / 2;
+        const relationX = 100 / width;
+        const relationY = 100 / height;
 
-        // const currentEyeX: number = currentPosition.getServo(Servo.EyeX)!;
-        // const currentEyeY: number = currentPosition.getServo(Servo.EyeY)!;
-        // const currentNeckY: number = currentPosition.getServo(Servo.NeckY)!;
+        const targetX: number = targetBoundingBox[0] + targetBoundingBox[2] / 2;
+        const targetY: number = targetBoundingBox[1];
 
-        // const newEyeX = currentEyeX;
-        // const newEyeY = currentEyeY;
-        // const newNeckY = currentNeckY;
+        const diffX = ( -targetX + centerX ) * relationX;
+        const diffY = ( targetY - centerY ) * relationY;
+
+        const currentPosition = this.raspberry.getServos();
+        const currentEyeX: number = currentPosition.getServo(Servo.EyeX)!;
+        const currentEyeY: number = currentPosition.getServo(Servo.EyeY)!;
+
+        const newEyeX = currentEyeX + diffX;
+        const newEyeY = currentEyeY + diffY;
         
-        // headPosition.setServo(Servo.EyeX, newEyeX);
-        // headPosition.setServo(Servo.EyeY, newEyeY);
-        // headPosition.setServo(Servo.NeckY, newNeckY);
+        headPosition.setServo(Servo.EyeX, newEyeX);
+        headPosition.setServo(Servo.EyeY, newEyeY);
 
-        // return headPosition;
+        return headPosition;
     }
 
     private calculateHeadPosition(targetBoundingBox: BoundingBox): Position {

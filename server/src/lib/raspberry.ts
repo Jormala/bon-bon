@@ -149,6 +149,7 @@ export class Raspberry {
     }
 
     private async getImageDimensions(base64Image: string): Promise<void> {
+        return;
         // fucking kill me 
         const dimensions: { width: number, height: number } = await new Promise((resolved) =>
         {

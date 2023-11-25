@@ -20,6 +20,7 @@ export class Controller {
     private vision = false;   // Should we process vision
     private wantToSee: (() => boolean) = () => { return this.vision || this.looking };
 
+    private currentBoundingBox: BoundingBox | null = null;
 
     public constructor(client: WebClient, raspberry: Raspberry) {
         this.raspberry = raspberry;
@@ -41,11 +42,10 @@ export class Controller {
 
         // is this a hack?
         // yes
-        if (this.gazing && this.animator.animationEnded()) {
-            this.gazing = false;
-
-            const randomAnimation = this.getRandomActAnimation();
-            this.animator.loadAnimation(randomAnimation);
+        if (this.animator.animationEnded() && this.currentBoundingBox) {
+            this.animator.lookAt(this.currentBoundingBox!);
+            // const randomAnimation = this.getRandomActAnimation();
+            // this.animator.loadAnimation(randomAnimation);
         }
 
         // TODO: Implement the calibration process here and to animator.
@@ -76,11 +76,14 @@ export class Controller {
         const bbox = await this.getBoundingBox(rawImageData);
         const currentBoundingBox = bbox.length === 4 ? bbox as BoundingBox : null;
 
+        this.currentBoundingBox = currentBoundingBox;
+
         if (!currentBoundingBox ||  // We don't see anything
             !this.looking) {  // We aren't looking for anything
             return;
         }
 
+        this.animator.loadAnimation("joku hassu animaatio");
         this.animator.lookAt(currentBoundingBox);
         this.looking = false;
         this.gazing = true;
@@ -116,13 +119,21 @@ export class Controller {
                 }
 
                 case 'start-looking': {
-                    this.looking = true;
-                    this.gazing = false;
 
-                    const lookForAnimation: string = OPTIONS.get("look-for");
-                    this.animator.loadAnimation(lookForAnimation);
+                    if (this.currentBoundingBox === null) {
+                        break;
+                    }
 
-                    this.client.sendInfo('log', "Started looking");
+                    this.animator.lookAt(this.currentBoundingBox);
+
+                    // this.looking = true;
+                    // this.gazing = false;
+
+                    // const lookForAnimation: string = OPTIONS.get("look-for");
+                    // this.animator.loadAnimation(lookForAnimation);
+
+                    // this.client.sendInfo('log', "Started looking");
+                    // break;
                     break;
                 }
 

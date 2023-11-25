@@ -242,4 +242,15 @@ eye-x
 eye-y
 neck-x 
 neck-y
-jaw -->
+jaw
+
+
+TODO:
+- remember the gpiod daemon command
+- make thing camera response faster (maybe using websockets)
+- don't make the camera jiggle when looking
+- make the looking loop better idiot
+
+- manual animations DON'T use head servos!!
+ -->
+

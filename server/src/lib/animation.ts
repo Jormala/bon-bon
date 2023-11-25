@@ -135,9 +135,13 @@ export class Position {
         return this.servos[servo];
     }
 
-    public setServo(servo: Servo, value: ServoValue) {
-        this.raw_servos[servo] = value;
-        this.servos[servo] = realServoValue(value, servo);
+    public setServo(servo: Servo, value: ServoValue, mapped: boolean = false) {
+        this.raw_servos[servo] = value;  // this may cause the stupid bug. because this is used when interpolating
+        if (!mapped) {
+            value = realServoValue(value, servo);
+        }
+
+        this.servos[servo] = value;
     }
 
     public static interpolate(pos1: Position, pos2: Position, p: number): Position | null {
@@ -161,7 +165,7 @@ export class Position {
             returnServos[servo] = interpolatedValue;
         }
 
-        return new Position(returnServos, true);
+        return new Position(returnServos, false);
     }
 
     /**
