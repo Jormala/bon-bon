@@ -4,11 +4,15 @@
     "RECEIVED_IMAGE_TYPE": "jpg",
     "CAMERA_TIMEOUT": 10000,
     "MIN_SCORE": 0.5,
-    "USE_FILLING": true,
-    "SLEEP": 50,
+    "CAMERA_SLEEP": 50,
+    "SERVO_SLEEP": 50,
     "LOOK_FOR_ANIMATION": "look-for",
+    "DISTANCE_TRESHOLD": 0.03,
+    "EYE_X_RELATION": 1,
+    "EYE_Y_RELATION": 1,
+    "NECK_Y_RELATION": 1,
     "ACT_ANIMATIONS": [
-        "wave", "chomp"
+        "wave"
     ],
     "DEFAULT_POSITION": {
         "l-shoulder-x": 50,

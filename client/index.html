@@ -196,7 +196,7 @@
         <div>
             <h2>Controls</h2>
 
-            <span><i>Hover over the buttons to read what they do</i></span>
+            <!-- <span><i>Hover over the buttons to read what they do</i></span> -->
 
             <div>
                 <button type="button"
@@ -210,26 +210,19 @@
                         Vision OFF
                 </button>
                 <button type="button"
-                    onclick="sendData('start-looking', null)" 
+                    onclick="sendData('set-state', 'looking')" 
                     title="Starts looking for the person. &NewLine; e.g. Starts parsing Vision and Starts the &quot;look-for&quot; animation.">
                         Start looking
                 </button>
-            </div>
-            <div>
                 <button type="button"
-                    onclick="sendData('restart-animation', null)" 
-                    title="Transitions to the start of the current animation and starts replaying it">
-                        Restart Animation
+                    onclick="sendData('set-state', 'idle')" 
+                    title="TODO :D">
+                        Idle
                 </button>
                 <button type="button"
-                    onclick="sendData('set-looping', 'true')" 
-                    title="Starts looping the current animation. Animation will restart if the animation has stopped.">
-                        Looping ON
-                </button>
-                <button type="button"
-                    onclick="sendData('set-looping', 'false')" 
-                    title="Stops looping the current animation">
-                        Looping OFF
+                    onclick="sendData('set-state', 'look-at')" 
+                    title="TODO :D">
+                        Look At
                 </button>
             </div>
 
@@ -285,6 +278,11 @@
                 onclick="sendData('reload-options', null)"
                 title="Reloads variables from &quot;options.json&quot; in the server">
                         Reload options.json
+            </button>
+            <button type="button"
+                    onclick="sendData('debug', null)" 
+                    title="TODO :D">
+                        debug button :D
             </button>
         </div>
     </div>

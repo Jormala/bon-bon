@@ -141,19 +141,29 @@ export class Raspberry {
 
         const imageData: string = response.data;
 
+        // debug:
+        // console.log(response);
+        // console.log(imageData);
+
         if (!this.imageWidth || !this.imageHeight) {
-            await this.getImageDimensions(imageData);
+            // temp solution. figure out how to properly extract this information from the
+            //  raw base64 image that comes from the shit
+            this.imageWidth = 480;
+            this.imageWidth = 360;
+
+            // TODO: Fix this pls
+            // await this.getImageDimensions(imageData);
         }
 
         return imageData;
     }
 
-    private async getImageDimensions(base64Image: string): Promise<void> {
+    private async getImageDimensions(base64Image: string) {
         return;
         // fucking kill me 
         const dimensions: { width: number, height: number } = await new Promise((resolved) =>
         {
-            var i = new Image()
+            var i = new Image();  // yeah this doesn't work on nodejs or something
             i.onload = function () {
                 resolved({
                     width: i.width,
@@ -193,15 +203,15 @@ export class Raspberry {
             servoValues[servo] = data[index] as number;
         });
 
-        // Fill the servo values with the default position
-        const defaultServos = Position.fromJSON(OPTIONS.get("DEFAULT_POSITION"));
-        console.log(defaultServos);
         const newServos = new Position(servoValues);
+
+        // Fill the servo values with the default position
+        const defaultServos = new Position(OPTIONS.get("DEFAULT_POSITION"));
         newServos.fillWith(defaultServos);
 
         console.log(`RASPBERRY: Queried servos: ${newServos.toString()}`);
 
-        this._servos = newServos;
+        this.setServos(newServos);
     }
 
     /**
@@ -210,9 +220,9 @@ export class Raspberry {
      * @param servoData Data send to the servos. **Needs to be formatted correctly.**
      */
     public setServos(position: Position) {
-        if (!this.servoEndpointOpen() || !this._servos) {
-            this.client.sendInfo('current-servos',  "Unavailable");
-            this.client.sendInfo('current-raw-servos', "Unavailable");
+        if (!this.servoEndpointOpen()) {
+            this.client.sendInfo('current-servos',  "null");
+            this.client.sendInfo('current-raw-servos', "null");
 
             return;
         }
@@ -220,7 +230,9 @@ export class Raspberry {
         this.servoClient!.send(position.toString());
 
         // We don't want to store the null values, so we fill them with the previous servo values
-        position.fillWith(this._servos!);
+        if (this._servos) {
+            position.fillWith(this._servos);
+        }
         this._servos = position;
 
         this.client.sendInfo('current-servos', position.toString());

@@ -7,7 +7,7 @@ const client = new WebClient();
 const raspberry = new Raspberry(client);
 
 
-async function startRunner(func: any, logAddress: string) {
+async function startRunner(func: any, logAddress: string, sleepOption: string) {
     while (true) 
     {
         if (!raspberry.isConnected()) {
@@ -17,8 +17,8 @@ async function startRunner(func: any, logAddress: string) {
             continue;
         }
 
-        // We declare this here because then SLEEP can be updated during runtime
-        const sleep = OPTIONS.get("SLEEP");
+        // We declare this here as then SLEEP can be updated during runtime through the client
+        const sleep = OPTIONS.get(sleepOption);
 
         try {
             await new Promise(r => setTimeout(r, sleep));
@@ -55,6 +55,6 @@ raspberry.connect().then((result) => {
 
     const controller = new Controller(client, raspberry);
 
-    startRunner(() => controller.cameraRunner(), 'camera-cycle');
-    startRunner(() => controller.servoRunner(), 'servo-cycle');
+    startRunner(() => controller.cameraRunner(), 'camera-cycle', "CAMERA_SLEEP");
+    startRunner(() => controller.servoRunner(), 'servo-cycle', "SERVO_SLEEP");
 });

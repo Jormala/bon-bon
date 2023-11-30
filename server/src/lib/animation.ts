@@ -24,21 +24,12 @@ export enum Servo {
  */
 type ServoValue = number | null;  // "null" means "do nothing" or "keep the last value"
 
-// this type is actually cursed
-// you'd think it would mean an object like:
-//  { Servo.Head1: ServoValue, Servo.Torso2: ServoValue, ... }
-// BUT for some fucking reason it means the VALUES:
-//  { 'head1': ServoValue, 'torso2': ServoValue, ... }
-// this makes sense now, but WHYY would you make the values be keys of the enum??? especially
-//  if i give the type `{ [key in Servo]: ServoValue }` then wouldn't you think that 
-//  it means the KEYS from `Servo` are, you know, KEYS?
-// like motherfucker what do you think [key in Servo] means? THE VALUE :DDDD
-export type Servos =  { [key in Servo]: ServoValue };
+export type Servos =  Partial<{ [key in Servo]: ServoValue }>;
 
 /**
  * Servos that are required for head movement.
  */
-export const HEAD_SERVOS: Servo[] = [ Servo.EyeX, Servo.EyeY, Servo.NeckY ];
+export const HEAD_SERVOS: Set<Servo> = new Set<Servo>([ Servo.EyeX, Servo.EyeY, Servo.NeckY ]);
 
 
 function map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -72,58 +63,49 @@ function realServoValue(value: ServoValue, servo: Servo) {
     return mapFrom100(value, min, max);
 }
 
+function unmapServoValue(mappedValue: ServoValue, servo: Servo) {
+    if (mappedValue == null) {
+        return mappedValue;
+    }
+
+    const map = OPTIONS.get("SERVO_MAPS")[servo];
+    const min = map.min;
+    const max = map.max;
+
+    return map(mappedValue, min, max, 0, 100);
+
+}
+
 /**
  * Represents a position Bon-Bon can make
  */
 export class Position {
     private readonly servos: Servos;
-    private readonly raw_servos: Servos;
 
     public constructor(servos: Servos, mapped = false) {
-        this.raw_servos = servos;
-        this.servos = structuredClone(servos);  // holy hell
+        this.servos = servos;
 
-        const keys: Servo[] = Object.keys(this.servos) as Servo[];
         for (const servo of Object.values(Servo)) 
         {
-            // All servos MUST be specified for each position
-            if (!keys.includes(servo)) {
-                throw Error(`Servo "${servo}" wasn't specified`);
-            }
+            // If the value is undefined, we override it as null
+            let value: ServoValue = this.servos[servo] ?? null;
+            this.servos[servo] = value;
 
             if (mapped) {
                 continue;
             }
 
-            let value: ServoValue = this.servos[servo];
             this.servos[servo] = realServoValue(value, servo);
         }
     }
 
-    public static fromJSON(servosJSON: any): Position {
-        const servos: Servos = {} as any;  // `any` -moment
+    public servosSpecified(servos?: Set<Servo>): boolean {
+        servos = servos ?? new Set<Servo>(Object.values(Servo));
 
-        for (const servo of Object.values(Servo)) 
+        for (const servo of servos)
         {
-            // Automatically specifies the unspecified servos as null
-            servos[servo] = servosJSON[servo] ?? null;
-        }
-
-        return new Position(servos);
-    }
-
-    public allServosSpecified(): boolean {
-        const specifiedServos: Servo[] = Object.keys(this.servos).map(rawServo => <Servo>rawServo);
-        for (const servo of Object.values(Servo))
-        {
-            // pretty weird that there are TWO if statements here...
-            // could this be done in a better way? ABSOLUTELY
-
-            if (!(specifiedServos.includes(servo))) {  // ALL servos
-                return false;
-            }
-
-            if (this.servos[servo] === null) {  // SPECIFIED
+            // explict check incase the value is 0
+            if (this.servos[servo] === null) {
                 return false;
             }
         }
@@ -132,17 +114,35 @@ export class Position {
     }
 
     public getServo(servo: Servo): ServoValue {
-        return this.servos[servo];
+        return this.servos[servo]!;
     }
 
     public setServo(servo: Servo, value: ServoValue, mapped: boolean = false) {
-        this.raw_servos[servo] = value;  // this may cause the stupid bug. because this is used when interpolating
         if (!mapped) {
             value = realServoValue(value, servo);
         }
 
         this.servos[servo] = value;
     }
+    
+    /**
+     * Gets all the servos that are specified *(have non-null values)*.
+     * @returns 
+     */
+    public getSpecifiedServos(): Set<Servo> {
+        // We get these dynamically, as servos can be specified after construction
+        const servos: Set<Servo> = new Set<Servo>();
+
+        for (const servo of Object.values(Servo)) 
+        {
+            if (this.servos[servo]) {
+                servos.add(servo)
+            }
+        }
+
+        return servos;
+    }
+    
 
     public static interpolate(pos1: Position, pos2: Position, p: number): Position | null {
         p = constrain(p, 0, 1);  // i'm scared
@@ -152,11 +152,12 @@ export class Position {
         {
             // it's crucial that we interpolate using the raw_servos, as when we construct the new 
             //  interpolated position, we'll have to map the new values to the defined ranges
-            const servo1 = pos1.raw_servos[servo];
-            const servo2 = pos2.raw_servos[servo];
+            const servo1 = pos1.servos[servo];
+            const servo2 = pos2.servos[servo];
 
-            if (servo1 === null || servo2 === null) {
-                throw Error("Cannot interpolate between 'null' values!");
+            if (servo1 == null || servo2 == null) {
+                returnServos[servo] = null;
+                continue;
             }
 
             // this one line powers basically everything about animating
@@ -165,7 +166,7 @@ export class Position {
             returnServos[servo] = interpolatedValue;
         }
 
-        return new Position(returnServos, false);
+        return new Position(returnServos, true);
     }
 
     /**
@@ -177,8 +178,7 @@ export class Position {
         const servos: Servos = {} as Servos;
 
         // there has to be a beautiful one liner for this :p
-        for (const servo of Object.values(Servo)) 
-        {
+        for (const servo of Object.values(Servo)) {
             servos[servo] = null;
         }
 
@@ -186,20 +186,20 @@ export class Position {
     }
 
     public toString(): string {
-        const array: (ServoValue)[] = [];
+        const array: ServoValue[] = [];
         for (const servo of Object.values(Servo)) 
         {
-            array.push(this.servos[servo]);
+            array.push(this.servos[servo]!);
         }
 
         return JSON.stringify(array);
     }
 
     public toStringRaw(): string {
-        const array: (ServoValue)[] = [];
+        const array: ServoValue[] = [];
         for (const servo of Object.values(Servo)) 
         {
-            array.push(this.raw_servos[servo]);
+            array.push(unmapServoValue(this.servos[servo]!, servo));
         }
 
         return JSON.stringify(array);       
@@ -233,14 +233,21 @@ export class Position {
 
             if (originalValue === null && fillValue !== null) {
                 this.servos[servo] = fillValue;
-
-                this.raw_servos[servo] = position.raw_servos[servo];  // same here whaat
             }
+        }
+    }
+
+    public filter(servos: Set<Servo>) {
+        // This is the same way how the `.filter` works in arrays (kinda)
+        const nullServos = Object.values(Servo).filter(servo => !servos.has(servo));
+
+        for (const servo of nullServos)
+        {
+            this.servos[servo] = null;
         }
     }
 }
 
-// Maybe integrate this class into the "Animation" -class
 /**
  * Represents a frame of movement.
  */
@@ -249,23 +256,44 @@ export class Frame {
     public speed: number;
     public position: Position;
 
-    public startTime: number;  // feels weird to store this here
-    public duration: number;
 
-
-    public constructor(position: Position, startTime: number, still: number, speed: number) {
+    public constructor(position: Position, still: number, speed: number) {
         this.position = position;
 
-        if (!this.position.allServosSpecified()) {
+        if (!this.position.servosSpecified()) {
             throw Error("Some servos have null values!");
         }
 
-        this.startTime = startTime;
         this.still = still;
         this.speed = speed;
+    }
 
-        // How long each frame takes to execute
-        this.duration = this.still + this.speed;
+    public get duration(): number {
+        return this.still + this.speed;
+    }
+
+    public static fromJSON(framesJSON: any[]): Frame[] {
+        const frames = [];
+
+        let lastPosition: Position | null = null;
+        for (let rawFrame of framesJSON)
+        {
+            const position = new Position(rawFrame.position);
+            if (lastPosition) {
+                position.fillWith(lastPosition);
+            }
+
+            const frame = new Frame(
+                position,
+                rawFrame.still,
+                rawFrame.speed
+            );
+            frames.push(frame);
+
+            lastPosition = position;
+        }
+
+        return frames;
     }
 
     public static interpolate(previousFrame: Frame, currentFrame: Frame, timeSinceStart: number): Position | null {
@@ -285,59 +313,62 @@ export class Frame {
 }
 
 
+// God I fucking suck at naming things
+interface AnimationFrame { frame: Frame, startTime: number };
+
 export class Animation {
-    private readonly frames: Frame[];
-    private readonly runTime: number;
+    public readonly specifiedServos: Set<Servo>;
+    public readonly runTime: number;
+
+    private readonly frames: AnimationFrame[];
+
+    private callbacks: (() => void)[] = [];
 
     // Used when animating
     private currentTime?: number;
     private previousTime?: number;
     private _animationEnded = true;
 
-    public constructor(frames: Frame[]) {
-        this.frames = frames;
+    public constructor(frames: Frame[], specifiedServos: Set<Servo> | null = null) {
+        if (specifiedServos && frames.length > 0) {
+            // Gets the first frame's specified servos by default
+            specifiedServos = new Set<Servo>(frames[0].position.getSpecifiedServos());
+        }
+
+        this.frames = [];
         this.runTime = 0;
-        for (const frame of this.frames) {
+        for (const frame of frames) 
+        {
+            frame.position.filter(specifiedServos!);
+
+            this.frames.push({
+                frame: frame,
+                startTime: this.runTime
+            });
+
             this.runTime += frame.duration;
         }
+
+        this.specifiedServos = specifiedServos ?? new Set<Servo>();
 
         this.resetAnimation();
     }
 
-    public static fromJSON(framesJSON: any[]): Animation {
-        const frames = [];
-
-        const useFilling = OPTIONS.get('USE_FILLING') as boolean;
-
-        let nextStartTime = 0;
-        let lastPosition: Position | null = null;
-        for (let rawFrame of framesJSON)
-        {
-            const position = Position.fromJSON(rawFrame.position);
-            if (useFilling && lastPosition) {
-                position.fillWith(lastPosition);
-            }
-
-            const frame = new Frame(
-                position,
-                nextStartTime,
-                rawFrame.still,
-                rawFrame.speed
-            );
-            frames.push(frame);
-
-            lastPosition = position;
-            nextStartTime += frame.duration;
-        }
-
-        return new Animation(frames);
+    // stupid stupid. CREATE A WRAPPER CLASS FOR THESE IN ANIMATOR
+    public addCallback(callback: (() => void)) {
+        this.callbacks.push(callback);
     }
-    
+
+    public triggerCallbacks() {
+        this.callbacks.forEach(callback => callback());
+        // this.callbacks = [];
+    }
+
     public resetAnimation() {
         this.currentTime = 0;
         this._animationEnded = false;
 
-        // this ensures that the animation doesn't start playing until `animate` is called the first time
+        // this ensures that the animation doesn't start playing until `animate` is called for the first time
         this.previousTime = undefined;  
     }
 
@@ -380,13 +411,13 @@ export class Animation {
     }
 
     public getPosition(time: number) {
-        let currentFrame: Frame | null = null;
-        let lastFrame: Frame | null = null;
+        let currentFrame: AnimationFrame | null = null;
+        let lastFrame: AnimationFrame | null = null;
         
-        for (let frame of this.frames) 
+        for (let animationFrame of this.frames) 
         {
-            if (frame.duration > time - frame.startTime && time - frame.startTime >= 0) {
-                currentFrame = frame;
+            if (animationFrame.frame.duration > time - animationFrame.startTime && time - animationFrame.startTime >= 0) {
+                currentFrame = animationFrame;
                 if (!lastFrame) {
                     lastFrame = currentFrame;
                 }
@@ -394,7 +425,7 @@ export class Animation {
                 break;
             }
 
-            lastFrame = frame;
+            lastFrame = animationFrame;
         }
         
         // If we don't find the "current frame", then we're at the last point.
@@ -407,7 +438,7 @@ export class Animation {
         // How far we're into the currentFrame
         const timeSinceStart = time - currentFrame!.startTime;
         // Interpolates between the two frames and gets the position.
-        const position = Frame.interpolate(lastFrame!, currentFrame!, timeSinceStart)!;
+        const position = Frame.interpolate(lastFrame!.frame, currentFrame!.frame, timeSinceStart)!;
 
         return position;
     }

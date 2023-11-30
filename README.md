@@ -61,9 +61,7 @@ A single `frame` has the following properties:
 
 A `position` describes an pose that Bon-bon can make. Each key of a position is a name of a servo, and the value is a number between `0` and `100` *or `null`.*
 
-A servo can also have a value of `null`, which basically means *"No movement"* or *"Keep the last servo value"*. They're only supported if [filling](#use_filling--option) is turned on.
-
-If a servo is not defined, then it's assumed to be `null`.
+A servo can also have a value of `null`, which basically means *"No movement"* or *"Keep the last servo value"*. If a servo is not defined, then it's assumed to be `null`.
 
 
 Below is an example animation, with all servos being `head1`, `torso2` and `eye3`:
@@ -85,9 +83,9 @@ Below is an example animation, with all servos being `head1`, `torso2` and `eye3
       "speed": 500,   // Animate to this frame in 1000 milliseconds
       "still": 1000,  // Keep this frame for 1000 milliseconds
       "position": {
-        "head1": 50,  // `head1` servo is set to 50
-        "torso2": 50, // `torso2` servo is set to 50
-        "eye3": 90    // `eye3` servo is set to 90
+        "head1": 50,     // `head1` servo is set to 50
+        "torso2": null,  // `torso2` servo uses the last value 10, meaning it does nothing
+        "eye3": 90       // `eye3` servo is set to 90
       }
     },
     {
@@ -116,35 +114,11 @@ Interesting options that can be changed in `server/res/options.json`. You can ch
 | `RECEIVED_IMAGE_TYPE` | `jpg`, `png`, `bmp`... | The image type that's received sent from the camera endpoint. |
 | `CAMERA_TIMEOUT` | Number of miliseconds | How long will wait for the camera endpoint to respond when data is requested. |
 | `MIN_SCORE` | Number between `0` and `1` | How confident must be to label a person in a captured image. `0 = Less confident` and `1 = More confident` |
-| `USE_FILLING` | `true` or `false` | Whether to use [filling](#use_filling--option) when reading animations from `animations.json`. |
 | `SLEEP` | Number of milliseconds | Basically how fast the code runs. **Must be greater than `1`** |
 | `TRANSITION_SPEED` | Number of milliseconds |  |
 | `LOOK_FOR_ANIMATION` | Animation name | The name of the animation that's played when looking for a person. |
 | `ACT_ANIMATIONS` | List of animation names | A list of animations from which an animation is chosen to be played when Bon-bon has finished looking towards a person. |
 | `SERVO_MAPS` | ***a really simple object :DD*** | The ranges where the specified servos values are actually mapped to. *Don't touch these values \:)* |
-
-
-#### `USE_FILLING` -option
-
-A pretty weird option.
-
-Basically fills the position undefined values with the vaules of the last position
-For example imagine the following set of positions:
-```json
-{ "head1":   10, "torso2": 20,   "eye3": 50   },
-{ "head1":    0, "torso2": null, "eye3": null },
-{ "head1": null, "torso2": null, "eye3": 30   }
-```
-
-If filling is turned off, the above would crash as some values are `null`.
-
-But with filling turned on, the above would be interpolated as:
-```json
-{ "head1":   10, "torso2": 20,   "eye3": 50   },
-{ "head1":    0, "torso2": 20,   "eye3": 50   },  // 'torso2' and 'eye3' use values from the last position
-{ "head1":    0, "torso2": 20,   "eye3": 30   }   // 'head1' and 'torso2' use last positions again, but 'eye3' gets a new value
-```
-*Note that if the first position has even a single null value this still crashes, as there's no previous value to get values from.*
 
 
 
@@ -210,47 +184,65 @@ TODO -->
 
 
 
-<!-- # Servos
-
-- 10 servos for hands
-  - 5 per hand
-  - shoulder x and y
-  - elbow
-  - hand x y
-  - (for each name "HandL" and "HandR")
-
-- eyes 2
-- neck 2
-  - neck-x, neck-y
-- chin 1
-  - jaw
-- 0 for ears
-
-- neck 1 and 2 eyes are (neck-y, eye-x, eye-y)
-
-l-shoulder-x
-l-shoulder-y
-l-elbow
-l-hand-x
-l-hand-y
-r-shoulder-x
-r-shoulder-y
-r-elbow
-r-hand-x
-r-hand-y
-eye-x
-eye-y
-neck-x 
-neck-y
-jaw
-
-
+<!--
 TODO:
 - remember the gpiod daemon command
-- make thing camera response faster (maybe using websockets)
-- don't make the camera jiggle when looking
-- make the looking loop better idiot
+  - make it start when raspberry starts (maybe use `exec` -node?)
+- make camera response faster (maybe using websockets or video streaming)
+- don't make the camera jiggle when looking (add constants when calculating differences)
+? What are minimum and maximum pulse times in the "pgiod node-red" palette
 
-- manual animations DON'T use head servos!!
- -->
+- manual animations will not DON'T use head servos (by default)
+? add a parameter to animations
 
+
+
+ANIMATOR IDEA DUMP:
+- Problem: We may want to have 2 animations playing at once *kinda*
+- We have the looking animation, and the actual "animation" (the act) that are playing at once
+- We need to combine these animation together, so both animations can act.
+- i fucking hate everything
+
+- BECAUSE WE DON'T NEED TO MAKE THIS STUPID COMPLICATED:
+  - You can probably just add an another variable to animator, called "headAnimation" (or something), that also
+   animates at the same time as the "bodyAnimation".
+  - then we just combine the servos that we get from the both of them (using .fillWith) and send that position 
+   to the raspberry
+  - (probably have defined for each animation what servos they use aswell)
+    - make sections of the body aswell (head, left-arm, right-arm, torso...) so it becomes easier
+    - no why would you do this
+
+IGNORE EVERYTHING ABOVE ABOUT ANIMATOR HERE WE GO: 
+- You'll have an list of servos, and you'll assign an animation to each one.
+- An animation is then responsible for controlling the servos that it was assined.
+- You cannot have 2 animations control 1 servo.
+  - If this is tried, you could have the following options:
+    1. Remove the animation that is controlling the servo, and then add your animation
+    2. Throw an exception
+    3. Don't use the animation.
+    x. Wait for the animation to finish. DON'T DO THIS implementing this will fucking suck
+
+What you'll have to change:
+- Animation will have to specify which servos it controls
+- New variable to animator, that specifies the list of current animations.
+- Animator will have to have better logic for adding animations.
+- Set animation will mean something entirely different
+- When getting current servo values, for each animation (in the new list in animator), use .fillWith
+   on all the animations to get the final position.
+
+- i have no idea how transitions should work. maybe you should add an `onAnimationEnd` function to 
+   animations. it shouldn't be THAT hard :DD
+- ANOTHER GENIOUS IDEA: Add a frame to the loaded animation from the currentPosition
+  - you'd need to modify the "Speed" value of the first real frame for this to work :/
+
+
+TODO LIST FOR 30.11.2023 (in order of importance)
+1. !!! FIND A WAY TO STREAM VIDEO FROM THE RASPBERRY. PROBABLY THE MOST IMPORTANT TODO !!!
+2. Finalize the general loop
+3. Add basic neck turning logic
+4. Fix controller inputs from client (most of them don't work)
+
+- TEST THE EXEC NODE IN NODE RED WHEN AT SCHOOL
+
+/\/\/\ !!! THATS A LOT OF WORK !!! /\/\/\
+-->

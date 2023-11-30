@@ -156,6 +156,11 @@ function handleMessage(event) {
         }
 
         case 'current-servos': {
+            if (data === "null") {
+                setElementText('current-servos', "No connection");
+                break;
+            }
+
             const parsedJSON = JSON.parse(data);
             
             let formattedData = "";
@@ -169,6 +174,11 @@ function handleMessage(event) {
         }
 
         case 'current-raw-servos': {
+            if (data === "null") {
+                setElementText('current-servos', "No connection");
+                break;
+            }
+
             const parsedJSON = JSON.parse(data);
 
             formattedData = "";
