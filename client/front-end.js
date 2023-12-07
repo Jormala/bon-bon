@@ -141,6 +141,11 @@ function handleMessage(event) {
             break;
         }
 
+        case 'controller-state': {
+            setElementText('controller-state', data);
+            break;
+        }
+
         case 'animation-state': {
             setElementText('animation-status', data);
             break;

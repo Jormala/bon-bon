@@ -24,19 +24,14 @@ export enum Servo {
  */
 type ServoValue = number | null;  // "null" means "do nothing" or "keep the last value"
 
-export type Servos =  Partial<{ [key in Servo]: ServoValue }>;
-
-/**
- * Servos that are required for head movement.
- */
-export const HEAD_SERVOS: Set<Servo> = new Set<Servo>([ Servo.EyeX, Servo.EyeY, Servo.NeckY ]);
+export type Servos = { [key in Servo]: ServoValue };
 
 
-function map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+function mapRange(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
     return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
 }
 function mapFrom100(value: number, outMin: number, outMax: number) {
-    return map(value, 0, 100, outMin, outMax);
+    return mapRange(value, 0, 100, outMin, outMax);
 }
 function constrain(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
@@ -72,8 +67,7 @@ function unmapServoValue(mappedValue: ServoValue, servo: Servo) {
     const min = map.min;
     const max = map.max;
 
-    return map(mappedValue, min, max, 0, 100);
-
+    return mapRange(mappedValue, min, max, 0, 100);
 }
 
 /**
@@ -82,13 +76,13 @@ function unmapServoValue(mappedValue: ServoValue, servo: Servo) {
 export class Position {
     private readonly servos: Servos;
 
-    public constructor(servos: Servos, mapped = false) {
-        this.servos = servos;
+    public constructor(servos: Partial<Servos>, mapped = false) {
+        this.servos = {} as any;
 
-        for (const servo of Object.values(Servo)) 
+        for (const servo of Object.values(Servo))
         {
             // If the value is undefined, we override it as null
-            let value: ServoValue = this.servos[servo] ?? null;
+            let value: ServoValue = servos[servo] ?? null;
             this.servos[servo] = value;
 
             if (mapped) {
@@ -97,6 +91,10 @@ export class Position {
 
             this.servos[servo] = realServoValue(value, servo);
         }
+    }
+
+    public clone(): Position {
+        return new Position(this.servos, true);
     }
 
     public servosSpecified(servos?: Set<Servo>): boolean {
@@ -113,12 +111,17 @@ export class Position {
         return true;
     }
 
-    public getServo(servo: Servo): ServoValue {
-        return this.servos[servo]!;
+    public getServo(servo: Servo, mapped: boolean = false): ServoValue {
+        const value = this.servos[servo];
+        if (mapped) {
+            return value;
+        }
+
+        return unmapServoValue(value, servo);
     }
 
-    public setServo(servo: Servo, value: ServoValue, mapped: boolean = false) {
-        if (!mapped) {
+    public setServo(servo: Servo, value: ServoValue, isMapped: boolean = false) {
+        if (!isMapped) {
             value = realServoValue(value, servo);
         }
 
@@ -135,15 +138,21 @@ export class Position {
 
         for (const servo of Object.values(Servo)) 
         {
-            if (this.servos[servo]) {
-                servos.add(servo)
+            if (this.servos[servo] !== null) {  // NOTE TO SELF: I FUCKING HATE 0'S
+                servos.add(servo);
             }
         }
 
         return servos;
     }
     
-
+    /**
+     * Interpolates between two position.
+     * @param pos1 Initial position, where `p = 0`.
+     * @param pos2 Final position, where `p = 1`.
+     * @param p The amout to interpolate between the two positions.
+     * @returns 
+     */
     public static interpolate(pos1: Position, pos2: Position, p: number): Position | null {
         p = constrain(p, 0, 1);  // i'm scared
 
@@ -155,13 +164,14 @@ export class Position {
             const servo1 = pos1.servos[servo];
             const servo2 = pos2.servos[servo];
 
-            if (servo1 == null || servo2 == null) {
+            if (servo1 === null || servo2 === null) {
                 returnServos[servo] = null;
                 continue;
             }
 
             // this one line powers basically everything about animating
-            let interpolatedValue: number = Math.round((servo1*(1-p) + servo2*p) * 100) / 100;
+            // it's possible to have mutliple types of interpolating, and we *could* define them here
+            let interpolatedValue: number = servo1*(1-p) + servo2*p;
 
             returnServos[servo] = interpolatedValue;
         }
@@ -177,11 +187,6 @@ export class Position {
     public static nullPosition(): Position {
         const servos: Servos = {} as Servos;
 
-        // there has to be a beautiful one liner for this :p
-        for (const servo of Object.values(Servo)) {
-            servos[servo] = null;
-        }
-
         return new Position(servos, true);  // no need to map null values
     }
 
@@ -189,7 +194,12 @@ export class Position {
         const array: ServoValue[] = [];
         for (const servo of Object.values(Servo)) 
         {
-            array.push(this.servos[servo]!);
+            let value = this.servos[servo];
+            if (value !== null) {
+                value = Math.round(value * 100) / 100;
+            }
+
+            array.push(value);
         }
 
         return JSON.stringify(array);
@@ -199,7 +209,12 @@ export class Position {
         const array: ServoValue[] = [];
         for (const servo of Object.values(Servo)) 
         {
-            array.push(unmapServoValue(this.servos[servo]!, servo));
+            let value = unmapServoValue(this.servos[servo]!, servo);
+            if (value !== null) {
+                value = Math.round(value * 100) / 100;
+            }
+
+            array.push(value);
         }
 
         return JSON.stringify(array);       
@@ -211,6 +226,7 @@ export class Position {
      * @returns Whether the positions equal each other
      */
     public equals(position: Position): boolean {
+        // this was used before :p
         for (const servo of Object.values(Servo)) 
         {
             if (this.servos[servo] !== position.servos[servo]) {
@@ -223,14 +239,17 @@ export class Position {
 
     /**
      * Fill any null values with the specified `position`
-     * @param position Position to fill the null values with
+     * @param position Position to fill the `null` values with.
      */
     public fillWith(position: Position) {
         for (const servo of Object.values(Servo)) 
         {
             const originalValue = this.servos[servo];
-            const fillValue = position.servos[servo];  // ??? why can I access a PRIVATE property here??
+            const fillValue = position.getServo(servo, true);
 
+            // Only replace fill the value when:
+            // 1. The `originalValue` isn't specified
+            // 2. `fillValue` is specified
             if (originalValue === null && fillValue !== null) {
                 this.servos[servo] = fillValue;
             }
@@ -259,10 +278,6 @@ export class Frame {
 
     public constructor(position: Position, still: number, speed: number) {
         this.position = position;
-
-        if (!this.position.servosSpecified()) {
-            throw Error("Some servos have null values!");
-        }
 
         this.still = still;
         this.speed = speed;
@@ -297,7 +312,7 @@ export class Frame {
     }
 
     public static interpolate(previousFrame: Frame, currentFrame: Frame, timeSinceStart: number): Position | null {
-        if (timeSinceStart >= currentFrame.speed) {
+        if (timeSinceStart >= currentFrame.speed || previousFrame === currentFrame) {
             return currentFrame.position;
         }
 
@@ -330,14 +345,14 @@ export class Animation {
     private _animationEnded = true;
 
     public constructor(frames: Frame[], specifiedServos: Set<Servo> | null = null) {
-        if (specifiedServos && frames.length > 0) {
+        if (!specifiedServos && frames.length > 0) {
             // Gets the first frame's specified servos by default
             specifiedServos = new Set<Servo>(frames[0].position.getSpecifiedServos());
         }
 
         this.frames = [];
         this.runTime = 0;
-        for (const frame of frames) 
+        for (const frame of frames)
         {
             frame.position.filter(specifiedServos!);
 

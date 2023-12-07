@@ -6,6 +6,7 @@ import { WebClient } from './webclient';
 import { Position, Servo } from './animation';
 
 import { OPTIONS } from './options'
+import imageSize from 'image-size';
 
 
 export class Raspberry {
@@ -18,6 +19,7 @@ export class Raspberry {
     private raspberryIp?: string;
     private cameraEndpoint?: string;
     private servoGetEndpoint?: string;
+    private servoSetEndpoint?: string;
 
     private readonly RASPBERRY_PORT: number;
 
@@ -30,23 +32,21 @@ export class Raspberry {
         this.RASPBERRY_PORT = OPTIONS.get("RASPBERRY_PORT");
     }
 
-
+    // We don't want these values to be changed
     public getImageWidth() {
         return this.imageWidth;
     }
-
     public getImageHeight() {
         return this.imageHeight;
     }
-
-    public getServos(): Position {
-        return this._servos!;
-    }
-
     public isConnected(): boolean {
         return this.connected;
     }
 
+    public getServos(): Position {
+        // We don't want the servo values to be changed externally
+        return this._servos!.clone();
+    }
 
     public async connect() {
         if (!await this.getIPV4(this.RASPBERRY_PORT)) {
@@ -55,22 +55,19 @@ export class Raspberry {
 
         this.cameraEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/camera`;
         this.servoGetEndpoint = `http://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo/get`;
+        this.servoSetEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo/set`;
 
         console.log('RASPBERRY: Trying to establish connection to Raspberry...');
         this.servoClient = this.constructClient();
 
-        if (!await waitFor(() => this._servos !== null)) {
+        // "Wait for 10000 milliseconds for `this._servos !== null` to be true. If this doesn't happen..."
+        if (!await waitFor(() => this._servos !== null, 10000)) {
             throw Error("Failed to get initial servo values!");
         }
-
-        return true;
     }
 
     private constructClient(): WebSocket {
-        // this doesn't need to be constructed EVERYtime here. too lazy to move
-        const servoEndpoint = `ws://${this.raspberryIp}:${this.RASPBERRY_PORT}/servo/set`;
-
-        const servoClient: WebSocket = new WebSocket(servoEndpoint);
+        const servoClient: WebSocket = new WebSocket(this.servoSetEndpoint!);
 
         servoClient.on('open', async() => {
             console.log("RASPBERRY: Established connection!");
@@ -87,6 +84,7 @@ export class Raspberry {
 
             this.client.sendInfo('log', "Server lost connection with the Raspberry");
 
+            // Wait for 3 seconds before we try to reconnect (yeah these numbers are pulled from my ass)
             setTimeout(() => {
                 console.log("RASPBERRY: Reconnecting...")
                 this.client.sendInfo('log', "Server is trying to reconnect with the Raspberry...");
@@ -123,6 +121,10 @@ export class Raspberry {
             this.client.sendInfo('camera-response-time', "TIMED OUT");
             this.client.sendInfo('log', "Camera timed out")
 
+            // Sleep for a bit, as `raspistill` command might fail if we send data straight away to it.
+            //  (might be unneccesary)
+            // await new Promise(r => setTimeout(r, 100));  
+
             throw err;
         }
 
@@ -131,50 +133,24 @@ export class Raspberry {
         console.log(`RASPBERRY: Camera query took ${responseTime}ms`)
         this.client.sendInfo('camera-response-time', `${responseTime}ms`);
 
-        console.log(response.status);
-
-        if (response.status !== 200) {
-            this.client.sendInfo('log', "Camera error on the Raspberry");
-
-            throw Error("Camera error on the Raspberry");
-        }
-
         const imageData: string = response.data;
 
-        // debug:
-        // console.log(response);
-        // console.log(imageData);
-
         if (!this.imageWidth || !this.imageHeight) {
-            // temp solution. figure out how to properly extract this information from the
-            //  raw base64 image that comes from the shit
-            this.imageWidth = 480;
-            this.imageWidth = 360;
+            await this.getImageDimensions(imageData);
 
-            // TODO: Fix this pls
-            // await this.getImageDimensions(imageData);
+            console.log(`RASPBERRY: Width '${this.imageWidth}'`);
+            console.log(`RASPBERRY: Height '${this.imageHeight}'`);
         }
 
         return imageData;
     }
 
     private async getImageDimensions(base64Image: string) {
-        return;
-        // fucking kill me 
-        const dimensions: { width: number, height: number } = await new Promise((resolved) =>
-        {
-            var i = new Image();  // yeah this doesn't work on nodejs or something
-            i.onload = function () {
-                resolved({
-                    width: i.width,
-                    height: i.height,
-                });
-            };
-            i.src = base64Image;
-        });
+        const buffer = Buffer.from(base64Image, 'base64');
+        const { width, height } = imageSize(buffer);
         
-        this.imageWidth = dimensions.width;
-        this.imageHeight = dimensions.height;
+        this.imageWidth = width!;
+        this.imageHeight = height!;
     }
 
     private async getInitialServoValues() {
@@ -235,8 +211,8 @@ export class Raspberry {
         }
         this._servos = position;
 
-        this.client.sendInfo('current-servos', position.toString());
-        this.client.sendInfo('current-raw-servos', position.toStringRaw());
+        this.client.sendInfo('current-servos', this._servos.toString());
+        this.client.sendInfo('current-raw-servos', this._servos.toStringRaw());
     }
 
     private servoEndpointOpen(): boolean {
@@ -353,7 +329,7 @@ async function testHttp(host: string, port: number): Promise<boolean> {
 }
 
 
-async function waitFor(func: () => any): Promise<boolean> {
+async function waitFor(func: () => any, timeout: number): Promise<boolean> {
     return new Promise((resolve) => {
         const id = setInterval(() => {
             // We only verify the servo endpoint because imalazy
@@ -366,6 +342,6 @@ async function waitFor(func: () => any): Promise<boolean> {
         setTimeout(() => {
             clearInterval(id);
             resolve(false);
-        }, 10000);
+        }, timeout);
     });
 }

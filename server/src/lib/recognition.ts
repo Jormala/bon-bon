@@ -16,10 +16,12 @@ export class Recognition {
             await this.loadModel();
         }
 
+        const minScore = OPTIONS.get('MIN_SCORE');
+
         // The complicated magic
         const imageBuffer = Buffer.from(base64Image, 'base64');
         const imageTensor = tf.node.decodeImage(imageBuffer);
-        const predictions = await this.model.detect(imageTensor, undefined, OPTIONS.get('MIN_SCORE'));
+        const predictions = await this.model.detect(imageTensor, undefined, minScore);
 
         return predictions;
     }

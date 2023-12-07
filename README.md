@@ -114,11 +114,19 @@ Interesting options that can be changed in `server/res/options.json`. You can ch
 | `RECEIVED_IMAGE_TYPE` | `jpg`, `png`, `bmp`... | The image type that's received sent from the camera endpoint. |
 | `CAMERA_TIMEOUT` | Number of miliseconds | How long will wait for the camera endpoint to respond when data is requested. |
 | `MIN_SCORE` | Number between `0` and `1` | How confident must be to label a person in a captured image. `0 = Less confident` and `1 = More confident` |
-| `SLEEP` | Number of milliseconds | Basically how fast the code runs. **Must be greater than `1`** |
+| `CAMERA_SLEEP` | Number of milliseconds. **Must be greater than `1`** | Basically how fast the code runs or how long the program waits until doing anything with the camera again. |
+| `SERVO_SLEEP` | Number of milliseconds. **Must be greater than `1`** | Same as `CAMERA_SLEEP` but for servos. |
 | `TRANSITION_SPEED` | Number of milliseconds |  |
 | `LOOK_FOR_ANIMATION` | Animation name | The name of the animation that's played when looking for a person. |
-| `ACT_ANIMATIONS` | List of animation names | A list of animations from which an animation is chosen to be played when Bon-bon has finished looking towards a person. |
-| `SERVO_MAPS` | ***a really simple object :DD*** | The ranges where the specified servos values are actually mapped to. *Don't touch these values \:)* |
+| `DISTANCE_TRESHOLD` | *TODO* | *TODO* |
+| `EYE_X_RELATION` | *TODO* | *TODO* |
+| `EYE_Y_RELATION` | *TODO* | *TODO* |
+| `NECK_X_RELATION` | *TODO* | *TODO* |
+| `SERVO_MOVE_DURATION` | *TODO* | *TODO* |
+| `IDLE_INTERVAL` | *TODO* | *TODO* |
+| `ACT_ANIMATIONS` | List of animation names | A list of animations from which an animation is chosen to be played when Bon-bon finds a person. |
+| `DEFALUT_POSITION` | *TODO* | *TODO* |
+| `SERVO_MAPS` | ***a really simple object :DD*** | The ranges where the specified servos values are actually mapped to. *Danger around these values* |
 
 
 

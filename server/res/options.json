@@ -1,35 +1,40 @@
 {
-    "RASPBERRY_IP": "192.168.92.38",
+    "RASPBERRY_IP": "192.168.1.84",
     "RASPBERRY_PORT": 1880,
-    "RECEIVED_IMAGE_TYPE": "jpg",
+    "RECEIVED_IMAGE_TYPE": "jpeg",
     "CAMERA_TIMEOUT": 10000,
-    "MIN_SCORE": 0.5,
-    "CAMERA_SLEEP": 50,
-    "SERVO_SLEEP": 50,
+    "MIN_SCORE": 0.4,
+    "CAMERA_SLEEP": 1,
+    "SERVO_SLEEP": 1,
     "LOOK_FOR_ANIMATION": "look-for",
-    "DISTANCE_TRESHOLD": 0.03,
+    "DISTANCE_TRESHOLD": 0.1,
     "EYE_X_RELATION": 1,
     "EYE_Y_RELATION": 1,
-    "NECK_Y_RELATION": 1,
+    "NECK_X_RELATION": 0.8,
+    "SERVO_MOVE_DURATION": 10,
+    "IDLE_INTERVAL": {
+        "min": 2000,
+        "max": 6000
+    },
     "ACT_ANIMATIONS": [
         "wave"
     ],
     "DEFAULT_POSITION": {
         "l-shoulder-x": 50,
         "l-shoulder-y": 50,
-        "l-elbow": 50,
-        "l-hand-x": 50,
+        "l-elbow": 61,
+        "l-hand-x": 61,
         "l-hand-y": 50,
         "r-shoulder-x": 50,
         "r-shoulder-y": 50,
-        "r-elbow": 50,
+        "r-elbow": 76,
         "r-hand-x": 50,
         "r-hand-y": 50,
-        "eye-x": 50,
-        "eye-y": 50,
+        "eye-x": 60,
+        "eye-y": 55,
         "neck-x": 50,
-        "neck-y": 50,
-        "jaw": 50
+        "neck-y": 22,
+        "jaw": 58
     },
     "SERVO_MAPS": {
         "l-shoulder-x": {

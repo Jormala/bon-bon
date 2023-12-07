@@ -1,18 +1,19 @@
-import { Animation, Frame, Position, Servo } from './animation';  
+import { Position, Servo } from './animation';  
 import { WebClient } from './webclient'
 import { Recognition } from './recognition';
 import { Raspberry } from './raspberry';
-import { Animator, BoundingBox } from './animator';
-
+import { Animator, BoundingBox, AnimationHandle } from './animator';
 import { OPTIONS } from './options';
+
 import fs from 'fs';
 
 
 enum State {
-    Looking,                // We're looking for a person
-    LookingAtAndAnimating,  // We're looking at a person and animating
-    Animating,              // We're animating something. We're not looking for anything
-    LookingAt               // We're looking at the person if they exist
+    Looking = 'Looking',                                 // We're looking for a person
+    LookingAtAndAnimating = 'Looking at and Animating',  // We're looking at a person and animating
+    Animating = 'Animating',                             // We're animating something. We're not looking for anything
+    LookingAt = 'Looking At',                            // We're looking at the person if they exist
+    Idle = 'Idle'                                        // We're not doing anything
 }
 
 
@@ -22,7 +23,7 @@ export class Controller {
     private client: WebClient;
     private animator: Animator;
 
-    private currentState: State = State.Animating;
+    private currentState: State = State.Idle;
     private vision: boolean = false;
 
     private static readonly ANIMATIONS_PATH: string = "res/animations.json";
@@ -37,8 +38,12 @@ export class Controller {
 
         this.client.setMessageHandler((type, data) => { this.handleInput(type, data) });
 
-        // TODO: Remove this
-        this.animator.idle(1000);
+        this.startLooking();
+    }
+
+    private setState(newState: State) {
+        this.currentState = newState;
+        this.client.sendInfo("controller-state", newState);
     }
 
     /**
@@ -46,31 +51,6 @@ export class Controller {
      */
     public async servoRunner() {
         this.animator.animate();
-
-        if (!this.animator.animationEnded()) {
-            return;
-        }
-
-        switch (this.currentState) {
-            case State.Looking: {
-
-                break;
-            }
-
-            case State.Animating:
-            case State.LookingAtAndAnimating: {
-                this.animator.idle(5000).addCallback(() => {
-                    this.currentState = State.Looking;
-                });
-
-                break;
-            }
-
-            case State.LookingAt: {
-                // do nothing
-                break;
-            }
-        }
     }
 
     /**
@@ -83,9 +63,9 @@ export class Controller {
             return;
         }
 
-        let rawImageData;
+        let rawBase64ImageData;
         try {
-            rawImageData = await this.raspberry.getCamera();
+            rawBase64ImageData = await this.raspberry.getCamera();
         }
         catch (err) {
             if (err instanceof Error) {
@@ -96,51 +76,48 @@ export class Controller {
             throw err;
         }
 
-        const bbox = await this.getBoundingBox(rawImageData);
+        const bbox = await this.getBoundingBox(rawBase64ImageData);
         const currentBoundingBox = bbox.length === 4 ? bbox as BoundingBox : null;
 
-        if (!currentBoundingBox) {
+        this.handleBoundingBox(currentBoundingBox);
+    }
+
+    private async getBoundingBox(imageData: string): Promise<number[]> {
+        const startTime = Date.now();
+
+        const receivedImageType = OPTIONS.get("RECEIVED_IMAGE_TYPE");;
+        const imgData = `data:image/${receivedImageType};data:image/${receivedImageType};base64,${imageData}`;
+        this.client.sendInfo('vision', imgData);
+
+        // Detect thingys in the image
+        const bbox = await this.recognition.getFirstPersonBoundingBox(imageData);
+        this.client.sendInfo('person-bbox', bbox);
+
+        console.log(`RECOGNITION: Took ${(Date.now() - startTime)}ms`)
+
+        return bbox;
+    }
+
+    private handleBoundingBox(boundingBox: BoundingBox | null) {
+        if (!boundingBox) {
             return;
         }
 
-        const lookAtAnimation = this.animator.lookAt(currentBoundingBox)!;
-        lookAtAnimation.addCallback(() => {
-
-        });
-        
         if (this.currentState === State.Looking) {
+            this.animator.clearAnimations();
+
             const randomActAnimation = this.getRandomActAnimation();
-
-            // TODO: Make it possible to retrieve attributes from the raw json back here.
-            //  I need the new "look when animating"
-            this.animator.endAnimation();
-            const animationData = this.loadAnimation(randomActAnimation);
-            const animation = this.animator.loadAnimation(animationData.frames);
-
-            if (animationData.lookWhileAnimating) {
-                this.currentState = State.LookingAtAndAnimating;
-                animation.addCallback(() => {
-                    // After animation, look forward
-                    this.animator.animateToPosition(new Position({
-                        [Servo.EyeX]: 50,
-                        [Servo.EyeY]: 50,
-                        [Servo.NeckY]: 50
-                    }));
-
-                    this.currentState = State.Animating;
-                });
-            }
-            else {
-                this.currentState = State.Animating;
-            }
+            this.playAnimation(randomActAnimation, true);
         }
+
+        this.animator.lookAt(boundingBox);
     }
     
-    public handleInput(type: string, data: string) {
+    private handleInput(type: string, data: string) {
         try {
             switch (type) {
                 case 'start-animation': {
-                    this.loadAnimation(data);
+                    this.playAnimation(data);
 
                     this.client.sendInfo('log', `Started animation "${data}"`);
                     break;
@@ -152,7 +129,7 @@ export class Controller {
 
                     this.animator.animateToPosition(position);
 
-                    this.currentState = State.Animating;
+                    this.setState(State.Animating);
 
                     break;
                 }
@@ -160,22 +137,20 @@ export class Controller {
                 case 'set-state': {
                     switch (data) {
                         case 'idle': {
-                            this.currentState = State.Animating;
-                            this.animator.endAnimation();
+                            this.setState(State.Idle);
+                            this.animator.clearAnimations();
 
                             break;
                         }
 
                         case 'looking': {
-                            this.currentState = State.Looking;
-
-                            this.setLookForAnimation();
+                            this.startLooking();
 
                             break;
                         }
 
                         case 'look-at': {
-                            this.currentState = State.LookingAt;
+                            this.setState(State.LookingAt);
 
                             break;
                         }
@@ -184,6 +159,8 @@ export class Controller {
                             throw Error(`Unknown state '${data}'`);
                         }
                     }
+
+                    break;
                 }
 
                 case 'set-vision': {
@@ -235,43 +212,38 @@ export class Controller {
         }
     }
 
-    private setLookForAnimation() {
-        const lookForAnimation = this.loadAnimation(OPTIONS.get("LOOK_FOR_ANIMATION"))[0];
-        lookForAnimation.addCallback(() => {
+    private startLooking() {
+        this.setState(State.Looking);
+
+        const rawLookForAnimation = this.loadAnimation(OPTIONS.get("LOOK_FOR_ANIMATION"));
+        const handle = this.animator.loadAnimation(rawLookForAnimation.frames)!;
+
+        handle.registerCallback(() => {
             // restart the look for animation
-            this.setLookForAnimation();
-        }); 
+            this.startLooking();
+        });
     }
 
-    private getRandomActAnimation(): string {
-        const animations = OPTIONS.get("ACT_ANIMATIONS");
-        return animations[Math.floor(Math.random()*animations.length)]
+    private endAnimating() {
+        const idleTime = this.generateRandomIdleTime();
+
+        // First idle for a bit.
+        const handle = this.animator.idle(idleTime);
+        handle.registerCallback(() => {
+            // After we've finished idling, start looking for the person.
+            this.startLooking();
+        });
     }
 
-    private async getBoundingBox(imageData: string): Promise<number[]> {
-        const startTime = Date.now();
-
-        const receivedImageType = OPTIONS.get("RECEIVED_IMAGE_TYPE");;
-        const imgData = `data:image/${receivedImageType};data:image/${receivedImageType};base64,${imageData}`;
-        this.client.sendInfo('vision', imgData);
-
-        // Detect thingys in the image
-        const bbox = await this.recognition.getFirstPersonBoundingBox(imageData);
-        this.client.sendInfo('person-bbox', bbox);
-
-        console.log(`RECOGNITION: Took ${(Date.now() - startTime)}ms`)
-
-        return bbox;
-    }
-
-        /**
+    /**
      * Tries to load an animation from "res/animations.json" \
      * This method throws an error if:
      * 1. File contains invalid JSON
      * 2. Animation isn't defined
      * @param animationName `name` field of the animation
+     * @returns The raw animation data
      */
-    public loadAnimation(animationName: string): any {  // TODO: Specify this type
+    private loadAnimation(animationName: string): any {
         // Reason we load every time, is so we can edit the animation data during runtime
         const data: string = fs.readFileSync(Controller.ANIMATIONS_PATH, 'utf8');
 
@@ -304,14 +276,49 @@ export class Controller {
         return foundAnimation;
     }
 
-    private playAnimation(name: string) {
+    private playAnimation(name: string, force: boolean = false) {
         const animationData = this.loadAnimation(name);
+        const animation = this.animator.loadAnimation(animationData.frames, force);
 
-        this.currentState = State.Animating;
-        if (animationData.lookWhileAnimating) {
-            this.currentState = State.LookingAtAndAnimating;
+        if (animation === null) {
+            console.log("CONTROLLER: Couldn't start the animation!");
+            this.client.sendInfo('log', "Couldn't start the animation!");
+
+            return;
         }
 
-        this.animator.loadAnimation(animationData.frames);
+        this.setState(State.Animating);
+        if (animationData.lookWhileAnimating) {
+            this.setState(State.LookingAtAndAnimating);
+            animation.registerCallback(() => {
+                // After animation, look forward
+                this.animator.animateToPosition(new Position({
+                    [Servo.EyeX]: 50,
+                    [Servo.EyeY]: 50,
+                    [Servo.NeckY]: 50
+                }));
+
+                this.setState(State.Animating);
+            });
+        }
+    }
+
+    private getRandomActAnimation(): string {
+        const animations = OPTIONS.get("ACT_ANIMATIONS");
+        return animations[Math.floor(Math.random()*animations.length)]
+    }
+
+    private generateRandomIdleTime(): number {
+        try {
+            const interval = OPTIONS.get("IDLE_INTERVAL");
+            return interval.min + Math.random() * (interval.max - interval.min);  // came straight from my ass
+        }
+        catch (err) {
+            // https://www.youtube.com/watch?v=_PNBkabyuJo
+            console.error(err);
+            this.client.sendInfo('log', "Error occured while generating a RANDOM IDLE TIME WTF IS HAPPENING");
+
+            return 5000;
+        }
     }
 }

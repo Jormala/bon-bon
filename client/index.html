@@ -140,6 +140,13 @@
                 </tr>
 
                 <tr>
+                    <td>Controller state</td>
+                    <td>
+                        <code id="controller-state">Uninitialized</code>
+                    </td>
+                </tr>
+
+                <tr>
                     <td>Animation status</td>
                     <td>
                         <code id="animation-status">Uninitialized</code>
@@ -183,25 +190,16 @@
                         </div>
                     </td>
                 </tr>
-                
-                <!-- <tr>
-                    <td>HEADER</td>
-                    <td>
-                        <code id="server-connection">Uninitialized</code>
-                    </td>
-                </tr> -->
             </table>
         </div>
 
         <div>
             <h2>Controls</h2>
 
-            <!-- <span><i>Hover over the buttons to read what they do</i></span> -->
-
             <div>
                 <button type="button"
                     onclick="sendData('set-vision', 'true')" 
-                    title="Starts parsing current vision">
+                    title="Starts parsing current vision. Will parse even if no animation vision is &quot;needed&quot;.">
                         Vision ON
                 </button>
                 <button type="button"
@@ -216,12 +214,12 @@
                 </button>
                 <button type="button"
                     onclick="sendData('set-state', 'idle')" 
-                    title="TODO :D">
+                    title="Set's the controller's state to 'Idle'. Bon-Bon will not do anything.">
                         Idle
                 </button>
                 <button type="button"
                     onclick="sendData('set-state', 'look-at')" 
-                    title="TODO :D">
+                    title="Set's the controller's state to 'Look At'. Bon-Bon will try to look at the person.">
                         Look At
                 </button>
             </div>
@@ -278,11 +276,6 @@
                 onclick="sendData('reload-options', null)"
                 title="Reloads variables from &quot;options.json&quot; in the server">
                         Reload options.json
-            </button>
-            <button type="button"
-                    onclick="sendData('debug', null)" 
-                    title="TODO :D">
-                        debug button :D
             </button>
         </div>
     </div>

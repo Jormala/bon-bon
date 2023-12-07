@@ -1,66 +1,51 @@
 [
     {
-        "name": "wave",
-        "headStill": false,
+        "name": "look-for",
+        "lookWhileAnimating": false,
         "frames": [
             {
                 "speed": 0,
-                "still": 200,
+                "still": 1500,
                 "position": {
-                    "head1": 90,
-                    "torso2": 10,
-                    "eye3": 10
+                    "eye-x": 50,
+                    "eye-y": 50,
+                    "neck-x": 0
                 }
             },
             {
                 "speed": 500,
-                "still": 1000,
+                "still": 1500,
                 "position": {
-                    "head1": 50,
-                    "torso2": 50,
-                    "eye3": 90
-                }
-            },
-            {
-                "speed": 1000,
-                "still": 1000,
-                "position": {
-                    "head1": 40,
-                    "torso2": 70,
-                    "eye3": 10
+                    "eye-x": 50,
+                    "eye-y": 50,
+                    "neck-x": 100
                 }
             }
         ]
     },
     {
-        "name": "wave-2",
-        "headStill": false,
+        "name": "wave",
+        "lookWhileAnimating": false,
         "frames": [
             {
                 "speed": 0,
-                "still": 200,
+                "still": 0,
                 "position": {
-                    "head1": 90,
-                    "torso2": 10,
-                    "eye3": 10
+                    "neck-y": 100
                 }
             },
             {
                 "speed": 500,
-                "still": 1000,
+                "still": 0,
                 "position": {
-                    "head1": 50,
-                    "torso2": 50,
-                    "eye3": 90
+                    "neck-y": 0
                 }
             },
             {
-                "speed": 1000,
-                "still": 1000,
+                "speed": 500,
+                "still": 0,
                 "position": {
-                    "head1": 40,
-                    "torso2": 70,
-                    "eye3": 10
+                    "neck-y": 50
                 }
             }
         ]
